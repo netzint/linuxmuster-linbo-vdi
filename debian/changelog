@@ -1,3 +1,16 @@
+
+linuxmuster-linbo-vdi (0.90.2-1) UNRELEASED; urgency=medium
+
+  * change requirements as demo twice
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 08 Dec 2020 14:00:54 +0100
+
+linuxmuster-linbo-vdi (0.90.1-1) UNRELEASED; urgency=medium
+
+  * change requirements as demo
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 08 Dec 2020 14:00:54 +0100
+
 linuxmuster-linbo-vdi (0.90ubuntu1) UNRELEASED; urgency=medium
 
   * Initial upload 

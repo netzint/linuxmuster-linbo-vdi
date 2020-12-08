@@ -1,2 +1,3 @@
 python-magic==0.4.15 # used to determine encoding in linbo files and csv uploads
 python-ldap
+test

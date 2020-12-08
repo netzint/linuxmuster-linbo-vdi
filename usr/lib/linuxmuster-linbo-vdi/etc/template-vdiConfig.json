@@ -1,0 +1,9 @@
+{
+"node" : "hv01",
+"hvIp" : "10.0.0.10",
+"hvUser" : "root@pam",
+"password" : "Muster!",
+"serverIp" : "local",
+"ports" : "135,455,49665",
+"timeoutConnectionRequest" : 1000,
+}

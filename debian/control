@@ -1,0 +1,11 @@
+Source: linuxmuster-linbo-vdi
+Section: admin
+Priority: optional
+Maintainer: Joanna Meinelt <joanna.meinelt@netzint.de>
+Build-Depends: debhelper (>= 4.0.0), fakeroot
+
+Package: linuxmuster-linbo-vdi
+Architecture: all
+Depends: python3-nmap, python3-proxmoxer
+Homepage: www.linuxmuster.net
+Description: linbo vdi server tool for linuxmuster.net v7.x

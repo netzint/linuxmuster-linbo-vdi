@@ -7,6 +7,6 @@ vdiLocalService = True
 #vdiServiceLocal = False
 
 def dbprint(println):
-    debugging = False
+    debugging = True
     if debugging:
         print (println)

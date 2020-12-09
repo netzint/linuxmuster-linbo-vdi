@@ -245,6 +245,8 @@ def mainClones(group = "all"):
             for vmid in idRange:
                 allallInfos[vmid]["user"] = ""
 
+
+
 ####### calculates summary values 'allocated_vms', 'existing_vms', 'building_vms' #######
         allocated = 0
         existing = 0
@@ -287,16 +289,20 @@ def mainClones(group = "all"):
                 #print(err)
                 continue
 
-        allallInfos["summary"] = {}
-        allallInfos["summary"]["allocated_vms"] = allocated
-        allallInfos["summary"]["available_vms"] = available
-        allallInfos["summary"]["existing_vms"] = existing
-        allallInfos["summary"]["registered_vms"] = registered
-        allallInfos["summary"]["building_vms"] = building
-        allallInfos["summary"]["failed_vms"] = failed
+        summary = {}
+        summary["allocated_vms"] = allocated
+        summary["available_vms"] = available
+        summary["existing_vms"] = existing
+        summary["registered_vms"] = registered
+        summary["building_vms"] = building
+        summary["failed_vms"] = failed
 
         if group == "all":
-            allallGroupInfos[vdiGroup] = allallInfos
+            allallGroupInfos[vdiGroup] = {}
+            allallGroupInfos[vdiGroup]['clone_vms'] = allallInfos
+            allallGroupInfos[vdiGroup]['summary']  = summary
+        else:
+            allallInfos['summary'] = summary
 
 ####### prints the whole JSON with all information #######
 

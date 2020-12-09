@@ -19,7 +19,7 @@ import subprocess
 # returns global values node, serverIp, hvIp, hvUser, password
 
 #file = open("/etc/netzint/vdiConfig.json", 'r')
-file = open("/etc/linuxmuster/linbo-vdi/vdiConfig.json", 'r')
+file = open("/etc/linuxmuster/linbo/vdiConfig.json", 'r')
 vdiConfigStr = file.read()
 vdiConfig = json.loads(vdiConfigStr)
 

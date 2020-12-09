@@ -327,10 +327,15 @@ def mainMaster(group="all"):
         masterVmids = masterInfos['vmids'].split(',')
         masterName = masterInfos['hostname']
 
-        # general
-        groupInfos = getGroupInfosMaster(masterName)
-        groupInfos['actual_imagesize'] = getActualImagesize(vdiGroup)
-        groupInfos['hostname'] = masterName
+        if group == "all":
+            # general
+            groupInfos = getGroupInfosMaster(masterName)
+            groupInfos['actual_imagesize'] = getActualImagesize(vdiGroup)
+            groupInfos['hostname'] = masterName
+        else:
+            groupInfos['basic'] = getGroupInfosMaster(masterName)
+            groupInfos['basic']['actual_imagesize'] = getActualImagesize(vdiGroup)
+            groupInfos['basic']['hostname'] = masterName
 
         allApiInfos = {}
         dbprint("*** Getting information to Masters from Group " + vdiGroup + " ***")
@@ -345,7 +350,10 @@ def mainMaster(group="all"):
                 pass
             allApiInfos.update(apiInfos)
 
-        groupInfos['master_vms'] = allApiInfos
+        if group == "all":
+            groupInfos['master_vms'] = allApiInfos
+        else:
+            groupInfos.update(allApiInfos)
 
         # summary
         existing = 0
@@ -404,5 +412,3 @@ if __name__ == "__main__":
             mainClones(group)
         else:
             print("***** wrong parameter! *****")
-
-            

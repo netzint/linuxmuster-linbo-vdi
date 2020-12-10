@@ -1,3 +1,11 @@
+linuxmuster-linbo-vdi (0.90.10-1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * updated vdiservice.py, createNewMaster.py and removeMaster.py; added
+    deleteConnectionFiles; some other fixes
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Thu, 10 Dec 2020 21:11:11 +0100
+
 linuxmuster-linbo-vdi (0.90.9-1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

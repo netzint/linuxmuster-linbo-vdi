@@ -1,16 +1,13 @@
 {
 "node" : "hv01",
-"hvIp" : "10.10.1.71",                                                      
+"hvIp" : "10.0.0.10",                                                      
 "hvUser" : "root@pam",
 "password" : "Muster!",
-"serverIp" : "127.0.0.1",
 "ports" : "135,455,49665",
 "vdiLocalService" : true,
 "debugging" : false,
 "minimum_vms" : 4,
 "maxmimum_vms" : 20, 
 "prestartet_vms" : 3,
-"timeoutConnectionRequest" : 1000,
-"token_name": "vdiacces",
-"token_value":"f92a5970-6111-4572-97b8-0a54e7a6fa9f"
+"timeoutConnectionRequest" : 1000
 }

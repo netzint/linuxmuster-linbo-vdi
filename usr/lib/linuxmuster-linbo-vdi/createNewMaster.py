@@ -69,6 +69,21 @@ def findNewVmid(masterNode, masterVmids):
     #sys.exit()
 
 
+def getDeviceConf(masterGroup):
+    command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
+    devicesCsv = getCommandOutput(command)
+    master = {}
+    for line in devicesCsv:
+        line = str(line)
+        ip = line.split(';')[4]
+        mac = line.split(';')[3]
+        if line.split(';')[2] == masterGroup and masterGroup:
+            master = {"ip": ip, "mac": mac}
+    dbprint(master)
+    return master
+
+
+
 def checkConsistence(masterHostname, masterIp, masterMAC):
     command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
     devicesCsv = getCommandOutput(command)
@@ -255,9 +270,10 @@ def waitForStatusStoppped(proxmox, timeout, node, vmid):
 def main(vdiGroup):
     dbprint("*** Creating new Master begins for Group " + vdiGroup + " begins ***")
     masterInfos = getMasterDetails(vdiGroup)
+    masterDeviceInfos = getDeviceConf(vdiGroup)
     masterName = masterInfos['name']
     masterHostname = masterInfos['hostname']
-    masterIp = masterInfos['ip']
+    masterIp = masterDeviceInfos['ip']
     masterNode = node
     masterVmids = masterInfos['vmids']
     masterVmid = findNewVmid(masterNode, masterVmids)
@@ -270,7 +286,7 @@ def main(vdiGroup):
     masterScsi0 = masterInfos['scsi0']
     masterMemory = masterInfos['memory']
     masterBridge = masterInfos['bridge']
-    masterMac = masterInfos['macaddress']
+    masterMac = masterDeviceInfos['mac']
     masterTag = masterInfos['tag']
     masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + masterTag
     masterDisplay = masterInfos['display']

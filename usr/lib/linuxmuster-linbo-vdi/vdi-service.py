@@ -13,7 +13,8 @@ import subprocess
 import time
 import getVmStates
 import json
-import createNewMaster, removeMaster, removeClone, buildClone, deleteConnectionFiles
+from deleteConnectionFiles import deleteDeprecatedFiles
+import createNewMaster,removeMaster,removeClone,buildClone
 from globalValues import checkConnections,vdiLocalService,dbprint,getVDIGroups,getMasterDetails
 if vdiLocalService == False:
     from globalValues import ssh
@@ -125,27 +126,28 @@ while True:
     ### Clone Handling: ###
     for group in vdiGroups:
 
-        groupData = getMasterDetails(group)
-        cloneStates = getVmStates.mainClones(group)
+        if (( int(masterStates['summary']['existing_master']) - int(masterStates['summary']['existing_master']) ) >= 1):
+            groupData = getMasterDetails(group)
+            cloneStates = getVmStates.mainClones(group)
 
-        print("***** Clone States Summary: *****")
-        print(json.dumps(cloneStates['summary'],indent=2))
+            print("***** Clone States Summary: *****")
+            print(json.dumps(cloneStates['summary'],indent=2))
 
-        # if under minimum  ||  if available < prestarted  &&  existing < maximum
-        if ( (cloneStates['summary']['existing_vms']) < groupData['minimum_vms']) \
-            or ( cloneStates['summary']['available_vms'] < groupData['prestarted_vms']
-            and ( cloneStates['summary']['existing_vms'] < groupData['maxmimum_vms']) ):
+            # if under minimum  ||  if available < prestarted  &&  existing < maximum
+            if ( (cloneStates['summary']['existing_vms']) < groupData['minimum_vms']) \
+                    or ( cloneStates['summary']['available_vms'] < groupData['prestarted_vms']
+                    and ( cloneStates['summary']['existing_vms'] < groupData['maxmimum_vms']) ):
                 print("***** Try building new Clone ... *****")
                 t = threading.Thread(target=buildClone.main, args=(group,))
                 t.start()
-        # if (available > prestarted) || existing > minimum)
-        elif (cloneStates['summary']['available_vms'] > groupData['prestarted_vms']
-            and cloneStates['summary']['existing_vms'] > groupData['minimum_vms']):
+            # if (available > prestarted) || existing > minimum)
+            elif (cloneStates['summary']['available_vms'] > groupData['prestarted_vms']
+                    and cloneStates['summary']['existing_vms'] > groupData['minimum_vms']):
                 print("***** Try removing Clone ... *****")
                 t = threading.Thread(target=removeClone.main, args=(group,), daemon = True)
                 t.start()
 
     ### delete deprecated connection files ###
-    #deleteConnectionFiles()
+    deleteDeprecatedFiles()
 
 time.sleep(5)

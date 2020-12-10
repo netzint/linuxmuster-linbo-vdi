@@ -14,8 +14,7 @@ from datetime import datetime
 import sys
 import os
 from proxmoxer import ProxmoxAPI
-from globalValues import node,proxmox,getMasterDetails,getCommandOutput,getFileContent
-from common import dbprint,vdiLocalService
+from globalValues import node,dbprint,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:
     from globalValues import ssh
 

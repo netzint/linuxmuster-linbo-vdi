@@ -1,3 +1,32 @@
+linuxmuster-linbo-vdi (0.90.6-1ubuntu1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * changed globalValues and vdiConfig for local and debugging option,
+    postinstall script for automatic start
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 10 Dec 2020 14:53:27 +0100
+
+linuxmuster-linbo-vdi (0.90.5-1ubuntu1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * some bug fixes
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 09 Dec 2020 14:53:27 +0100
+
+linuxmuster-linbo-vdi (0.90.4-1ubuntu1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * change requirements packages
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 09 Dec 2020 14:53:27 +0100
+
+linuxmuster-linbo-vdi (0.90.3-1ubuntu1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * change requirements packages
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Tue, 09 Dec 2020 14:53:27 +0100
+
 linuxmuster-linbo-vdi (0.90.2-1ubuntu1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

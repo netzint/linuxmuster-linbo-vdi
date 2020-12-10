@@ -36,15 +36,12 @@ case "$1" in
             #echo "Configure systemctl.."
             systemctl daemon-reload
             systemctl enable linuxmuster-linbo-vdi
-            #systemctl start linuxmuster-linbo-vdi
+            systemctl restart linuxmuster-linbo-vdi
 
             # set already installed flag
             touch $vdietc/.installed
             echo "---------------------------------------------------------------"
             echo "linuxmuster-linbo-vdi is now installed !"
-            echo ""
-            echo "if you want to use vdi server than confiure /etc/linuxmuster/linbo-vdi/startconfig.json"
-            echo "the config an start the service with systemctl start linuxmuster-linbo-vdi"
             echo "---------------------------------------------------------------"
         else
             # do update
@@ -52,10 +49,6 @@ case "$1" in
             echo "Updating linuxmuster-linbo-vdi"
             echo "---------------------------------------------------------------"
             echo "Stop linuxmuster-linbo-vdi"
-
-            systemctl is-active --quiet linuxmuster-linbo-vdi
-	    runbefore=$?
-
             systemctl stop linuxmuster-linbo-vdi
 
             # Always backup config file if things are going bad
@@ -65,17 +58,11 @@ case "$1" in
             # Requirements must always be checked
             /usr/bin/python3 -m pip install -r $vdietc/requirements.txt
 
+
             # start linbo-vdi
-            echo "Reload linuxmuster-linbo-vdi service"
+            echo "Start linuxmuster-linbo-vdi"
             systemctl daemon-reload
-
-            # start service if running before
-            if [ $runbefore -eq 0 ]
-             then
-              echo "Start linuxmuster-linbo-vdi service"
-              systemctl start linuxmuster-libo-vdi
-            fi
-
+            systemctl start linuxmuster-libo-vdi
             echo "---------------------------------------------------------------"
             echo "Updating linuxmuster-linbo-vdi ..done"
             echo "---------------------------------------------------------------"

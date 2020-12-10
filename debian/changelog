@@ -1,3 +1,17 @@
+linuxmuster-linbo-vdi (0.90.9-1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * deleteConnectionFiles.py added, new templateConfig, some other fixes
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Thu, 10 Dec 2020 18:23:55 +0100
+
+linuxmuster-linbo-vdi (0.90.8-1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * files fixed 
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Thu, 10 Dec 2020 16:23:55 +0100
+
 linuxmuster-linbo-vdi (0.90.7-1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

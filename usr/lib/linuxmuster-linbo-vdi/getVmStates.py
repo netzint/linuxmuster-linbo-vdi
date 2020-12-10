@@ -2,7 +2,8 @@
 #
 # getVmStates.py
 #
-# joanna@linuxmuster.net
+# joanna.meinelt@netzint.de
+#
 # 20200930
 
 

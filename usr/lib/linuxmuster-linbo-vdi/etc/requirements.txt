@@ -1,4 +1,4 @@
 proxmoxer
 paramiko
 requests
-python-map
+python-nmap

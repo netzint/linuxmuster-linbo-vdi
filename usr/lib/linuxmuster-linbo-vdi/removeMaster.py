@@ -74,7 +74,8 @@ def main(vdiGroup):
     removeables = findRemoveableMaster(masterStates, masterVmids)
 
     if (removeables is None):
-        dbprint("*** No Master couldnt get removed from group " + str(vdiGroup) + " . ***")
+        dbprint("*** No Master available from group " + str(vdiGroup) + " . ***")
+        return
     else:
         # if only 1 master exists and failed at building:
         now = datetime.now()
@@ -98,8 +99,10 @@ def main(vdiGroup):
                     dbprint("*** Master " + str(vmid) + " cant get removed.***")
                     dbprint(err)
                     return
+    if len(removeables) == 1:
+        return
     # if more than two master exists, try delete random:
-    if len(removeables) >= 2:
+    elif len(removeables) >= 2:
         dbprint("***** Without latest: *****")
         del removeables[(max(removeables, key=lambda k: removeables[k]))]
         dbprint(removeables)
@@ -113,7 +116,7 @@ def main(vdiGroup):
                     pass
             try:
                 proxmox.nodes(node).qemu(vmid).delete()
-                dbprint("*** Deleting random removeable VM: " + str(vmid)+ " ***")
+                dbprint("*** Deleting random removeable Master: " + str(vmid)+ " ***")
                 return
             except Exception as err:
                 dbprint("*** Master " + str(vmid) + " cant get removed.***")
@@ -121,7 +124,6 @@ def main(vdiGroup):
                 return
     else:
         dbprint("*** Only one master exists for " + str(vdiGroup) + " ...  deleting none. ***")
-
 
 
 if __name__ == "__main__":

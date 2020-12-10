@@ -12,7 +12,6 @@ from proxmoxer import ProxmoxAPI
 import paramiko
 import os
 import time
-from common import vdiLocalService
 import subprocess
 
 # returns ssh and proxmox api connection and
@@ -40,10 +39,12 @@ vdiLocalService = vdiConfig['vdiLocalService']
 global debugging
 debugging = vdiConfig['debugging']
 
+# set debugging options
 def dbprint(println):
     if debugging:
         print (println)
 
+# set local or remote option
 if vdiLocalService == False:
     global ssh
     ssh = paramiko.SSHClient()
@@ -66,10 +67,9 @@ def getFileContent(pathToFile):
         output = sftp.open(pathToFile)
         return output
 
+# get command output from shell remote or local
 def getCommandOutput(command):
     if vdiLocalService == True:
-        #output = os.system(command)
-        #command = list(command)
         #output = subprocess.check_output(command)
         output = subprocess.Popen(command,stdout=subprocess.PIPE,shell=True)
         #output = process.communicate()[0]
@@ -79,6 +79,7 @@ def getCommandOutput(command):
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(command)
         return ssh_stdout.readlines()
 
+# set a command remote or local
 def setCommand(command):
     if vdiLocalService == True:
         os.system(command)
@@ -86,19 +87,17 @@ def setCommand(command):
         ssh.exec_command(command)
 #    if vdiServiceLocal == True: <3
 
-
 # general Functions:
 def getMasterDetails(vdiGroup):
     try:
-        #sftp = ssh.open_sftp()
         remotePath = "/srv/linbo/start.conf." + str(vdiGroup) + ".vdi"
         output = getFileContent(remotePath)
-        #output = sftp.open(remotePath)
         data = json.load(output)
         return data
     except Exception as err:
         print(err)
 
+# check server connection
 def serverCheck():
     try:
         if ssh.get_transport() is not None:
@@ -110,6 +109,7 @@ def serverCheck():
     except Exception as err:
         print(err)
 
+# check hv connection
 def nodeCheck():
     try:
         proxmox.nodes(node).status.get()
@@ -119,6 +119,7 @@ def nodeCheck():
         print(err)
         return False
 
+# check connections to hv and if remote to server
 def checkConnections():
     while True:
         if vdiLocalService == False:
@@ -131,6 +132,7 @@ def checkConnections():
             print("Waiting.")
             time.sleep(5)
 
+# get all vdi groups
 def getVDIGroups():
     command = "ls /srv/linbo/*.vdi"
     #ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(command)

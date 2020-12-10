@@ -2,7 +2,7 @@
 #
 # getConnection.py
 #
-# joanna@linuxmuster.net
+# joanna.meinelt@netzint.de
 #
 # 20201122
 #
@@ -34,7 +34,10 @@ def sendConnection(node, vmid, user):
     # ALS NAMEN HASH 8 stellig?
     #config = str(random.getrandbits(64))
 
-    configFile = "start-vdi-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=8)) + ".vv"
+    timestamp = datetime.now()
+    dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")
+
+    configFile = "start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
     print(configFile)
     with open(configFile, "w") as outfile:
         outfile.write("[virt-viewer]" + "\n")

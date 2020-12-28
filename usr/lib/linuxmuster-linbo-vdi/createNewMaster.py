@@ -2,7 +2,7 @@
 #
 # createNewMaster.py
 #
-# joanna@linuxmuster.net
+# joanna.meinelt@netzint.de
 # 20200930
 #
 
@@ -81,7 +81,6 @@ def getDeviceConf(masterMac):
             master = {"ip": ip, "hostname": hostname}
     dbprint(master)
     return master
-
 
 
 def checkConsistence(masterHostname, masterIp, masterMAC):
@@ -286,8 +285,14 @@ def main(vdiGroup):
     masterMemory = masterInfos['memory']
     masterBridge = masterInfos['bridge']
     masterMac = masterInfos['mac']
-    masterTag = masterInfos['tag']
-    masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + masterTag
+    if "tag" in masterInfos:
+        masterTag = masterInfos['tag']
+        if masterTag != 0:
+            masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + masterTag
+        else:
+            masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac
+    else:
+        masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac
     masterDisplay = masterInfos['display']
     masterAudio = masterInfos['audio']
     masterUSB = masterInfos['usb0']

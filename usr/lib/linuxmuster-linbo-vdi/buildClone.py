@@ -2,7 +2,7 @@
 #
 # cloneMaster.py
 #
-# joanna@linuxmuster.net
+# joanna.meinelt@netzint.de
 # 20200930
 #
 
@@ -187,7 +187,7 @@ def main(vdiGroup):
     masterVmid = findLatestMaster(masterNode, masterVmids)
     masterGroup = vdiGroup
     masterBridge = masterInfos['bridge']
-    masterTag = masterInfos['tag']
+
 
 # fuer proxmox:
     cloneNode = masterNode
@@ -202,7 +202,14 @@ def main(vdiGroup):
 # change correct MAC address:  ### change MAC  address as registered !!!! get net0 from master and only change mac  # net0 = bridge=vmbr0,virtio=62:0C:5A:A0:77:FF,tag=29
     cloneConf = getDeviceConf(masterGroup)
     cloneMac = cloneConf[cloneVmid]['mac']
-    cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac + ",tag=" + masterTag
+    if "tag" in masterInfos:
+        masterTag = masterInfos['tag']
+        if masterTag != 0:
+            cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac + ",tag=" + masterTag
+        else:
+            cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac
+    else:
+        cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac
     dbprint("*** Assigning MAC " + str(cloneMac) + " ***")
     proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(net0=cloneNet)
 

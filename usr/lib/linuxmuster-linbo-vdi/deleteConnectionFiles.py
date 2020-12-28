@@ -31,4 +31,3 @@ def deleteDeprecatedFiles():
                 else:
                     dbprint(str(line) + " under 1 min")
 
-deleteDeprecatedFiles()

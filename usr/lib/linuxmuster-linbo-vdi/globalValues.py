@@ -24,8 +24,6 @@ vdiConfig = json.loads(vdiConfigStr)
 
 global node
 node = vdiConfig['node']
-global serverIp
-serverIp = vdiConfig['serverIp']
 global hvIp
 hvIp = vdiConfig['hvIp']
 global hvUser
@@ -46,6 +44,8 @@ def dbprint(println):
 
 # set local or remote option
 if vdiLocalService == False:
+    global serverIp
+    serverIp = vdiConfig['serverIp']
     global ssh
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())

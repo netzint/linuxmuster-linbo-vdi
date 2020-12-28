@@ -17,7 +17,6 @@ import subprocess
 # returns ssh and proxmox api connection and
 # returns global values
 
-#file = open("/etc/netzint/vdiConfig.json", 'r')
 file = open("/etc/linuxmuster/linbo-vdi/vdiConfig.json", 'r')
 vdiConfigStr = file.read()
 vdiConfig = json.loads(vdiConfigStr)
@@ -55,7 +54,6 @@ if vdiLocalService == False:
 
 global proxmox
 proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
-# proxmox = ProxmoxAPI(hvIp, user=hvUser,token_name='vdiserver',token_value='9f711699-99d1-423c-b2f5-cdb5748b3e5c')
 
 # Remote/Local Functions:
 def getFileContent(pathToFile):

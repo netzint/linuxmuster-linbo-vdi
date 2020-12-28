@@ -287,7 +287,7 @@ def main(vdiGroup):
     masterMac = masterInfos['mac']
     if "tag" in masterInfos:
         masterTag = masterInfos['tag']
-        if masterTag != 0:
+        if masterTag != "0":
             masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + masterTag
         else:
             masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac

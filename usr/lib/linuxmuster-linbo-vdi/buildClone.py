@@ -204,7 +204,7 @@ def main(vdiGroup):
     cloneMac = cloneConf[cloneVmid]['mac']
     if "tag" in masterInfos:
         masterTag = masterInfos['tag']
-        if masterTag != 0:
+        if masterTag != "0":
             cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac + ",tag=" + masterTag
         else:
             cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac

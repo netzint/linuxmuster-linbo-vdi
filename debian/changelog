@@ -1,3 +1,10 @@
+linuxmuster-linbo-vdi (0.90.14-1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * some changes for working with vdi start conf and vdiConfig.json
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Mon, 29 Dec 2020 16:12:42 +0100
+
 linuxmuster-linbo-vdi (0.90.13-1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

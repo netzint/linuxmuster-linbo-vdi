@@ -281,14 +281,18 @@ def main(vdiGroup):
     masterOsType = masterInfos['ostype']
     masterStorage = masterInfos['storage']
     masterScsiHw = masterInfos['scsihw']
-    masterScsi0 = masterInfos['scsi0']
+    masterPool = masterInfos['pool']
+    masterSize = masterInfos['size']
+    masterFormat = masterInfos['format']
+    masterScsi0 = masterPool + ":" + str(masterSize) + ",format=" + masterFormat
+    print(type(masterScsi0))
     masterMemory = masterInfos['memory']
     masterBridge = masterInfos['bridge']
     masterMac = masterInfos['mac']
     if "tag" in masterInfos:
         masterTag = masterInfos['tag']
-        if masterTag != "0":
-            masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + masterTag
+        if masterTag != 0:
+            masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + str(masterTag)
         else:
             masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac
     else:
@@ -300,12 +304,10 @@ def main(vdiGroup):
     timeout = masterInfos['timeout_building_master']
     masterDescription = getMasterDescription(vdiGroup)
 
-    print(masterMac)
     masterDeviceInfos = getDeviceConf(masterMac)
     masterIp = masterDeviceInfos['ip']
     masterHostname = masterDeviceInfos['hostname']
 
-    # addToLinbo(masterRoom, masterHostname, masterGroup, masterMac, masterIp) # add to LINBO if not already exists
     checkConsistence(masterHostname, masterIp, masterMac)
     # and set linbo-bittorrent restart??
     setLinboRemoteCommand(masterHostname)  # and sets linbo-remote command

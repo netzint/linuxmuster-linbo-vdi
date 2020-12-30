@@ -1,3 +1,10 @@
+linuxmuster-linbo-vdi (0.90.16-1) UNRELEASED; urgency=medium
+
+  [ Joanna Meinelt ]
+  * bug fixes in buildClone.py and vdi-service.py 
+
+ -- Joanna Meinelt <joanna.meinelt@netzint.de>  Mon, 30 Dec 2020 18:15:42 +0100
+
 linuxmuster-linbo-vdi (0.90.15-1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

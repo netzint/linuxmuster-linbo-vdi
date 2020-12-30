@@ -227,7 +227,6 @@ def mainClones(group = "all"):
                 #print(err)
                 pass
             allInfos = mergeInfos(vmid, apiInfos, groupInfos)
-            mergeInfos(vmid, apiInfos, groupInfos)
             allallInfos.update(allInfos)
 
 ####### adds user field if vm is used by an user #######

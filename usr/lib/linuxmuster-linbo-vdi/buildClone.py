@@ -54,7 +54,7 @@ def getVmidRange(masterGroup):
     vmidRange = []
     for line in output:
         if masterGroup in line:
-            if "master" not in line:
+            if "master" not in line.split(';')[1]:
                 vmid = line.split(';')[11]
                 vmidRange.append(vmid)
     return vmidRange
@@ -64,11 +64,12 @@ def getVmidRange(masterGroup):
 def findNextAvailableVmid(masterGroup):
     idRange = getVmidRange(masterGroup)
     for id in idRange:
-        try:
-            proxmox.nodes('hv01').qemu(id).status.get()
-        except:
-            dbprint("*** Next free VM ID: " + str(id))
-            return id
+        if id != '':
+            try:
+                proxmox.nodes('hv01').qemu(id).status.get()
+            except:
+                dbprint("*** Next free VM ID: " + str(id))
+                return id
     dbprint("*** No VM ID left .. create on server! ***")
     return
     #sys.exit()

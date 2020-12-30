@@ -125,8 +125,7 @@ while True:
 
     ### Clone Handling: ###
     for group in vdiGroups:
-
-        if (( int(masterStates['summary']['existing_master']) - int(masterStates['summary']['existing_master']) ) >= 1):
+        if (( int(masterStates['summary']['existing_master']) - int(masterStates['summary']['building_master']) ) >= 1):
             groupData = getMasterDetails(group)
             cloneStates = getVmStates.mainClones(group)
 
@@ -146,7 +145,8 @@ while True:
                 print("***** Try removing Clone ... *****")
                 t = threading.Thread(target=removeClone.main, args=(group,), daemon = True)
                 t.start()
-
+        else:
+            print("***** No finished Master available for Clone Hanndling ******")
     ### delete deprecated connection files ###
     deleteDeprecatedFiles()
 

@@ -8,9 +8,9 @@ case "$1" in
         python_version=$(basename $(readlink -f /usr/bin/python3))
 
         # circumvent missing .installed files in package. Can be removed later
-        if [ -f /etc/linuxmuster/.secret/administrator ]; then
-            touch $vdietc/.installed
-        fi
+        #if [ -f /etc/linuxmuster/.secret/administrator ]; then
+        #    touch $vdietc/.installed
+        #fi
 
         if [ ! -f $vdietc/.installed ];
         then

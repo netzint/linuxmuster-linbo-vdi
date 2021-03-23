@@ -75,10 +75,13 @@ def getDeviceConf(masterMac):
     master = {}
     for line in devicesCsv:
         line = str(line)
-        if line.split(';')[3] == masterMac:
-            ip = line.split(';')[4]
-            hostname = line.split(';')[1]
-            master = {"ip": ip, "hostname": hostname}
+        try:
+            if line.split(';')[3] == masterMac:
+                ip = line.split(';')[4]
+                hostname = line.split(';')[1]
+                master = {"ip": ip, "hostname": hostname}
+        except Exception as err:
+            dbprint(err)
     dbprint(master)
     return master
 
@@ -281,10 +284,10 @@ def main(vdiGroup):
     masterOsType = masterInfos['ostype']
     masterStorage = masterInfos['storage']
     masterScsiHw = masterInfos['scsihw']
-    masterPool = masterInfos['pool']
+    #masterPool = masterInfos['pool']
     masterSize = masterInfos['size']
     masterFormat = masterInfos['format']
-    masterScsi0 = masterPool + ":" + str(masterSize) + ",format=" + masterFormat
+    masterScsi0 = masterStorage + ":" + str(masterSize) + ",format=" + masterFormat
     print(type(masterScsi0))
     masterMemory = masterInfos['memory']
     masterBridge = masterInfos['bridge']

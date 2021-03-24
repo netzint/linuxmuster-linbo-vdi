@@ -54,9 +54,13 @@ case "$1" in
             echo "Stop linuxmuster-linbo-vdi"
 
             systemctl is-active --quiet linuxmuster-linbo-vdi
-	    runbefore=$?
-
-            systemctl stop linuxmuster-linbo-vdi
+	        runbefore=$?
+            
+            # stop service if running before
+            if [ $runbefore -eq 0 ]
+                echo "Stop linuxmuster-linbo-vdi service"
+                systemctl stop linuxmuster-linbo-vdi
+            fi
 
             # Always backup config file if things are going bad
             echo "Backing up vdiConfig.json"

@@ -58,6 +58,7 @@ case "$1" in
             
             # stop service if running before
             if [ $runbefore -eq 0 ]
+              then  
                 echo "Stop linuxmuster-linbo-vdi service"
                 systemctl stop linuxmuster-linbo-vdi
             fi

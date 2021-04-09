@@ -19,6 +19,7 @@ import getVmStates
 
 # finds existing master VMs and sorts them by dateOfCreation
 # so the oldest can be deleted first
+# returns if no master found
 def findRemoveableMaster(masterStates, masterVmids):
     removeables = {}
     vmids = masterVmids.split(',')
@@ -35,7 +36,7 @@ def findRemoveableMaster(masterStates, masterVmids):
     if len(removeables) == 0:
         dbprint("*** No Master exists! ***")
         return
-
+    dbprint("Removeable Masters:")
     dbprint(removeables)
 
     if len(removeables) == 1:
@@ -77,14 +78,53 @@ def main(vdiGroup):
         dbprint("*** No Master available from group " + str(vdiGroup) + " . ***")
         return
     else:
-        # if only 1 master exists and failed at building:
+        # check if master and failed at building:
         now = datetime.now()
         now = float(now.strftime("%Y%m%d%H%M%S"))
         for vmid in removeables:
-            if masterStates[vmid]['buildstate'] == "building" \
-                        and (now - float(masterStates[vmid]['dateOfCreation'])) > timeoutBuildingMaster:
+            if ( masterStates[vmid]['buildstate'] == "failed" ) \
+                    or ( masterStates[vmid]['buildstate'] == "building" \
+                    and (now - float(masterStates[vmid]['dateOfCreation'])) ) > timeoutBuildingMaster:
                 dbprint("*** Builded Master failed, removing: ***")
                 # here it could be checked with createNewMaster functions if just nmap check is left
+                status = masterStates[vmid]['status']
+                if status == "running":
+                    proxmox.nodes(node).qemu(vmid).status.stop.post()
+                    dbprint("*** Master " + str(vmid) + " is getting stopped.***")
+                    if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
+                        pass
+                    else: 
+                        dbprint(" *** Stop failed ***")
+                        # return 
+                try:
+                    proxmox.nodes(node).qemu(vmid).delete()
+                    dbprint("*** Try deleting failed at building VM: " + str(vmid) + " ***")
+                    return
+                except Exception as err:
+                    dbprint("*** Master " + str(vmid) + " cant get removed.***")
+                    dbprint(err)
+                    return
+    if len(removeables) == 1:
+        dbprint("*** Only one master exists for " + str(vdiGroup) + " ...  deleting none. ***")
+        return
+    # if more than two master exists, try delete random:
+    elif len(removeables) >= 2:
+        dbprint("***** Without latest: *****")
+        del removeables[(max(removeables, key=lambda k: removeables[k]))]
+        dbprint(removeables)
+
+        # HERE: CHECK IF MASTER IS REFERNCED .....
+        cloneStates = getVmStates.mainClones(vdiGroup)
+        linkedMasters = []
+        for vm in cloneStates:
+                if vm != "summary":
+                    if "master" in cloneStates[vm]:
+                        linkedMasters.append(cloneStates[vm]['master'])
+        dbprint("Linked Masters:")
+        dbprint(linkedMasters)
+        
+        for vmid in removeables:
+            if vmid not in linkedMasters:
                 status = masterStates[vmid]['status']
                 if status == "running":
                     proxmox.nodes(node).qemu(vmid).status.stop.post()
@@ -99,32 +139,8 @@ def main(vdiGroup):
                     dbprint("*** Master " + str(vmid) + " cant get removed.***")
                     dbprint(err)
                     return
-    if len(removeables) == 1:
+        dbprint("No Master was deleted")
         return
-    # if more than two master exists, try delete random:
-    elif len(removeables) >= 2:
-        dbprint("***** Without latest: *****")
-        del removeables[(max(removeables, key=lambda k: removeables[k]))]
-        dbprint(removeables)
-
-        for vmid in removeables:
-            status = masterStates[vmid]['status']
-            if status == "running":
-                proxmox.nodes(node).qemu(vmid).status.stop.post()
-                dbprint("*** Master " + str(vmid) + " is getting stopped.***")
-                if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
-                    pass
-            try:
-                proxmox.nodes(node).qemu(vmid).delete()
-                dbprint("*** Deleting random removeable Master: " + str(vmid)+ " ***")
-                return
-            except Exception as err:
-                dbprint("*** Master " + str(vmid) + " cant get removed.***")
-                dbprint(err)
-                return
-    else:
-        dbprint("*** Only one master exists for " + str(vdiGroup) + " ...  deleting none. ***")
-
 
 if __name__ == "__main__":
     main(sys.argv[1])

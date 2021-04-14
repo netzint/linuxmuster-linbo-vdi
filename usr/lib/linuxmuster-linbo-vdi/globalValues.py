@@ -23,6 +23,8 @@ vdiConfig = json.loads(vdiConfigStr)
 
 global node
 node = vdiConfig['node']
+global pool
+pool = vdiConfig['pool']
 global hvIp
 hvIp = vdiConfig['hvIp']
 global hvUser

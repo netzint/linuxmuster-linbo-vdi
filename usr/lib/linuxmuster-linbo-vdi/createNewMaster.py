@@ -13,7 +13,7 @@ import re
 import time
 from datetime import datetime
 from proxmoxer import ProxmoxAPI
-from globalValues import node,proxmox,dbprint,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
+from globalValues import node,pool,proxmox,dbprint,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -50,7 +50,7 @@ def getMasterDescription(vdiGroup):
 
     dbprint(cloopValues)
     return cloopValues
-
+    dbprint("-----------------")
 
 # get alls VMIDs and checks returns first which doesnt exist on hv (no delete from oldest)
 def findNewVmid(masterNode, masterVmids):
@@ -126,7 +126,7 @@ def checkMAC(x):
         return 0
 
 
-def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBios, masterBoot, masterCores,
+def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDesc, masterBios, masterBoot, masterCores,
              masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
              masterAudio, masterUSB, masterSpice):
     if checkMAC(masterMAC):
@@ -139,6 +139,7 @@ def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBi
     newContainer = {
         'name': masterName,
         'vmid': masterVmid,
+        'pool' : masterPool,
         'description': description,
         'bios': masterBios,
         'boot': masterBoot,
@@ -233,11 +234,11 @@ def deleteFailedMaster(masterVmid):
             dbprint("*** Failed Master " + str(masterVmid) + " is getting stopped.***")
             if waitForStatusStoppped(proxmox, 20, node, masterVmid) == True:
                 proxmox.nodes(node).qemu(masterVmid).delete()
-                dbprint("deleted VM: " + str(vmid))
+                dbprint("deleted VM: " + str(masterVmid))
                 return
                 #sys.exit()
     except Exception as err:
-        dbprint("*** Failed Master " + str(masterVmid) + " couldnt get removed ***")
+        dbprint("*** May there is an Error for deleting Master " + str(masterVmid) + " ***")
         dbprint(err)
         return
         #sys.exit()
@@ -274,10 +275,10 @@ def main(vdiGroup):
 
     masterInfos = getMasterDetails(vdiGroup)
     masterName = masterInfos['name']
-
     masterNode = node
     masterVmids = masterInfos['vmids']
     masterVmid = findNewVmid(masterNode, masterVmids)
+    masterPool = pool
     masterBios = masterInfos['bios']
     masterBoot = masterInfos['boot']
     masterCores = masterInfos['cores']
@@ -314,7 +315,7 @@ def main(vdiGroup):
     checkConsistence(masterHostname, masterIp, masterMac)
     # and set linbo-bittorrent restart??
     setLinboRemoteCommand(masterHostname)  # and sets linbo-remote command
-    createVM(masterName, masterMac, masterNode, masterVmid, masterDescription, masterBios, masterBoot, masterCores,
+    createVM(masterName, masterMac, masterNode, masterVmid, masterPool, masterDescription, masterBios, masterBoot, masterCores,
              masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
              masterAudio, masterUSB, masterSpice)
     startToPrepareVM(masterNode, masterVmid)  # start to get prepared by LINBO

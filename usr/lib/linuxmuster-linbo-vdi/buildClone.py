@@ -14,7 +14,7 @@ from datetime import datetime
 import sys
 import os
 from proxmoxer import ProxmoxAPI
-from globalValues import node,dbprint,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
+from globalValues import node,pool,dbprint,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -104,10 +104,10 @@ def generateCloneDescription(vdiGroup, masterVmid, cloneName):
     return description
 
 
-def cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription):
+def cloneMaster(masterNode, masterPool, masterVmid, cloneVmid, cloneName, cloneDescription):
     description = json.dumps(cloneDescription)    ### important! sonst liest nur die Haelfte
     dbprint("*** Clone-VM-Name: " + cloneName + " ***")
-    proxmox.nodes(masterNode).qemu(masterVmid).clone.post(newid=cloneVmid,name=cloneName,description=description)
+    proxmox.nodes(masterNode).qemu(masterVmid).clone.post(newid=cloneVmid,pool=masterPool,name=cloneName,description=description)
     print("*** Template is getting cloned to VM with next free VM-ID: " + str(cloneVmid) + " ***")
 
 
@@ -188,7 +188,7 @@ def main(vdiGroup):
     masterVmid = findLatestMaster(masterNode, masterVmids)
     masterGroup = vdiGroup
     masterBridge = masterInfos['bridge']
-
+    masterPool = pool
 
 # fuer proxmox:
     cloneNode = masterNode
@@ -198,7 +198,7 @@ def main(vdiGroup):
     cloneDescription = generateCloneDescription(vdiGroup, masterVmid, cloneName)
 
 # Cloning:
-    cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription)
+    cloneMaster(masterNode, masterPool, masterVmid, cloneVmid, cloneName, cloneDescription)
 
 # change correct MAC address:  ### change MAC  address as registered !!!! get net0 from master and only change mac  # net0 = bridge=vmbr0,virtio=62:0C:5A:A0:77:FF,tag=29
     cloneConf = getDeviceConf(masterGroup)

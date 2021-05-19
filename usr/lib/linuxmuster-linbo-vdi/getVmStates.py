@@ -8,7 +8,6 @@
 
 
 import json
-from ipaddress import IPv4Network
 import time
 import sys
 from datetime import datetime
@@ -168,8 +167,8 @@ def getLogedinUser():
         # Gegencheck domain and "users":
         if line.split()[2] == "users":
                 logedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
-    dbprint("***** Assigned: *****")
-    dbprint(json.dumps(logedIn, indent=2))
+    #dbprint("***** Assigned: *****")
+    #dbprint(json.dumps(logedIn, indent=2))
     return logedIn
 
 
@@ -210,12 +209,12 @@ def mainClones(group = "all"):
     allallInfos = {}
     for vdiGroup in allGroups:
 ####### Get Group Information #########
-        dbprint("***** Getting information to Clones from Group " + vdiGroup + " *****")
+        #dbprint("***** Getting information to Clones from Group " + vdiGroup + " *****")
 
 ####### Get collected JSON Info File to all VMs from Group #############
-        dbprint("***** ID Range for imagegroup: " + vdiGroup + " *****")
+        #dbprint("***** ID Range for imagegroup: " + vdiGroup + " *****")
         idRange = getVmidRange(vdiGroup)
-        dbprint(idRange)
+        #dbprint(idRange)
 
 ####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one list #######
         for vmid in idRange:
@@ -282,7 +281,7 @@ def mainClones(group = "all"):
                     elif allallInfos[vmid]['buildstate'] == "failed":
                         failed = failed + 1
                 except Exception as err:
-                    dbprint(err)
+                    #dbprint(err)
                     pass
             except Exception as err:
                 #print(err)
@@ -327,7 +326,7 @@ def mainMaster(group="all"):
     groupInfos = {}
     for vdiGroup in allGroups:
         ####### Get collected JSON Info File to all VMs from Group #############
-        dbprint("*** ID Range for imagegroup: " + vdiGroup + " ***")
+        #dbprint("*** ID Range for imagegroup: " + vdiGroup + " ***")
         masterInfos = getMasterDetails(vdiGroup)
         masterVmids = masterInfos['vmids'].split(',')
         masterName = masterInfos['hostname']
@@ -343,7 +342,7 @@ def mainMaster(group="all"):
             groupInfos['basic']['hostname'] = masterName
 
         allApiInfos = {}
-        dbprint("*** Getting information to Masters from Group " + vdiGroup + " ***")
+        #dbprint("*** Getting information to Masters from Group " + vdiGroup + " ***")
         ####### get api Infos #######
         for vmid in masterVmids:
             #print(type(vmid)) # => 'str'

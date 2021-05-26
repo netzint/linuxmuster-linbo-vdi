@@ -237,6 +237,8 @@ def mainClones(group = "all"):
                     if "buildstate" in allallInfos[vmid]:
                         if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
                             allallInfos[vmid]["user"] = logedIn[user]["full"]
+                         else:
+                            allallInfos[vmid]["user"] = ""
                     else:
                         allallInfos[vmid]["user"] = ""
         else:

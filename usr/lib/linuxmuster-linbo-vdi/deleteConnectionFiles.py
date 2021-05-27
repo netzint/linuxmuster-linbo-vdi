@@ -10,7 +10,7 @@ from datetime import datetime
 from globalValues import dbprint,getCommandOutput,setCommand
 
 def deleteDeprecatedFiles():
-    command = "ls /usr/lib/linuxmuster-linbo-vdi/start-vdi* 2>/dev/null"    # to just get if no error
+    command = "ls /tmp/vdi/start-vdi* 2>/dev/null"    # to just get if no error
     lines = getCommandOutput(command)
 
     timestamp = datetime.now()
@@ -21,10 +21,9 @@ def deleteDeprecatedFiles():
         for line in lines:
                 passedTime = 0
                 line = str(line, 'ascii')
-                #line = line.strip("/usr/lib/linuxmuster-linbo-vdi/")
                 lineSplitted = line.split('-')
-                dbprint(lineSplitted[4])
-                if ((now - float(lineSplitted[4])) > 100):
+                #dbprint(lineSplitted[4])
+                if ((now - float(lineSplitted[2])) > 60):
                     command = "rm " + str(line)
                     dbprint(str(line) + " deleting..")
                     setCommand(command)

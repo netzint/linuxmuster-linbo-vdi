@@ -148,6 +148,6 @@ def getVDIGroups():
             file = file.lstrip('/srv/linbo/start.conf.')
             file = file.rstrip('.vdi')
             vdiGroups.append(file)
-    print("***** Groups: *****")
-    print ("***** " + str(vdiGroups) + " *****")
+    #dbprint("***** Groups: *****")
+    #dbprint ("***** " + str(vdiGroups) + " *****")
     return vdiGroups

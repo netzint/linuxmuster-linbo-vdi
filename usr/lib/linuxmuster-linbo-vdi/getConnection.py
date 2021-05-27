@@ -37,9 +37,9 @@ def sendConnection(node, vmid, user):
     timestamp = datetime.now()
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")
 
-    configFile = "/tmp/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
+    configFilePath = "/tmp/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
     print(configFile)
-    with open(configFile, "w") as outfile:
+    with open(configFilePath, "w") as outfile:
         outfile.write("[virt-viewer]" + "\n")
         outfile.write("type" + "=" + str(virtViewerDictionary["type"]) + "\n")
         outfile.write("host-subject" + "=" + str(virtViewerDictionary["host-subject"]) + "\n")
@@ -54,6 +54,9 @@ def sendConnection(node, vmid, user):
         outfile.write("host" + "=" + str(virtViewerDictionary["host"]) + "\n")
         outfile.write("ca" + "=" + str(virtViewerDictionary["ca"]) + "\n")
     outfile.close()
+
+    connectionconfig = {"configFile" : configFilePath}
+    return connectionconfig
 
 
 def main(arguments):
@@ -78,16 +81,14 @@ def main(arguments):
                         print(vmid)
                         if  vmStates[vmid]['lastConnectionRequestTime'] != "":
                             passedTime = now - float(vmStates[vmid]['lastConnectionRequestTime'])
-                            print("Passed Time:")
-                            print(float(passedTime))
-                            print(float(timeoutConnectionRequest))
                             passedTime = 0
                             if float(passedTime) < float(timeoutConnectionRequest):
                                 sendConnection(node, vmid, requestUser)
-                                print("*** Found already assigned desctop VM " + str(vmid) + " and sending Connection again ***")
-                                sys.exit()
+                                #print("*** Found already assigned desctop VM " + str(vmid) + " and sending Connection again ***")
+                                print(sendConnection(node, vmid, requestUser))
+                                return(sendConnection(node, vmid, requestUser))
         except Exception as err:
-            print(err) # => vm doenst exist => besser auf existierende loopen
+            #print(err) # => vm doenst exist => besser auf existierende loopen
             continue
 
     ######## 2) try giving neverUsed Vmid
@@ -101,9 +102,9 @@ def main(arguments):
             continue
     try:
         vmid = random.choice(neverUsedVmids)
-        print(" *** Sending never used desctop VM:" + str(vmid) + " ***")
-        sendConnection(node, vmid, requestUser)
-        sys.exit()
+        #print(" *** Sending never used desctop VM:" + str(vmid) + " ***")
+        print(sendConnection(node, vmid, requestUser))
+        return(sendConnection(node, vmid, requestUser))
     except Exception as err:
         #print(err)
         pass
@@ -126,8 +127,11 @@ def main(arguments):
     try:
         vmid = random.choice(availableVmids)
         sendConnection(node, vmid, requestUser)
-        print("*** Found free desktop VM: " + str(vmid) + " ***")
-        sys.exit()
+        #dbprint("*** Found free desktop VM: " + str(vmid) + " ***")
+        #sys.exit()
+        print(sendConnection(node, vmid, requestUser))
+        return(sendConnection(node, vmid, requestUser))
+
     except Exception as err:
         #print(err)
         pass

@@ -126,7 +126,7 @@ def checkMAC(x):
         return 0
 
 
-def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDesc, masterBios, masterBoot, masterCores,
+def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,
              masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
              masterAudio, masterUSB, masterSpice):
     if checkMAC(masterMAC):
@@ -281,6 +281,7 @@ def main(vdiGroup):
     masterPool = pool
     masterBios = masterInfos['bios']
     masterBoot = masterInfos['boot']
+    masterBootDisk = masterInfos['bootdisk']
     masterCores = masterInfos['cores']
     masterOsType = masterInfos['ostype']
     masterStorage = masterInfos['storage']
@@ -315,7 +316,7 @@ def main(vdiGroup):
     checkConsistence(masterHostname, masterIp, masterMac)
     # and set linbo-bittorrent restart??
     setLinboRemoteCommand(masterHostname)  # and sets linbo-remote command
-    createVM(masterName, masterMac, masterNode, masterVmid, masterPool, masterDescription, masterBios, masterBoot, masterCores,
+    createVM(masterName, masterMac, masterNode, masterVmid, masterPool, masterDescription, masterBios, masterBoot, masterBootDisk, masterCores,
              masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
              masterAudio, masterUSB, masterSpice)
     startToPrepareVM(masterNode, masterVmid)  # start to get prepared by LINBO

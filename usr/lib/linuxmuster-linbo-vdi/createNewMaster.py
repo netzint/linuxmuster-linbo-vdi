@@ -143,6 +143,7 @@ def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDe
         'description': description,
         'bios': masterBios,
         'boot': masterBoot,
+        'bootdisk': masterBootDisk,
         'cores': masterCores,
         'ostype': masterOsType,
         'memory': masterMemory,

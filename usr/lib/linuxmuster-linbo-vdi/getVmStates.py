@@ -196,7 +196,7 @@ def getActualImagesize(vdiGroup):
 
 
 ####### CLONES: ########
-def mainClones(group = "all"):
+def mainClones(group = "all", quiet=False):
 
     checkConnections()
     allGroups = []
@@ -316,7 +316,7 @@ def mainClones(group = "all"):
 
 
 ####### MASTER: #######
-def mainMaster(group="all"):
+def mainMaster(group="all", quiet=False):
 
     checkConnections()
     allGroups = []
@@ -407,15 +407,33 @@ def mainMaster(group="all"):
 
 if __name__ == "__main__":
 
+    quiet = False
+    for x in range(len(sys.argv)):
+        if sys.argv[x] == "-quiet":
+            quiet = True
+            
     if sys.argv[1] == "-master":
+        if quiet == True:
+                mainMaster(quiet=True)
+            else:
+                mainMaster()
         mainMaster()
     elif sys.argv[1] == "-clones":
-        mainClones()
+        if quiet == True:
+                mainClones(quiet=True)
+            else:
+                mainClones()
     else:
         group = sys.argv[1]
         if sys.argv[2] == "-master":
-            mainMaster(group)
+             if quiet == True:
+                mainMaster(group, quiet=True)
+            else:
+                mainMaster(group)
         elif sys.argv[2] == "-clones":
-            mainClones(group)
+            if quiet == True:
+                mainClones(group, quiet=True)
+            else:
+               mainClones(group)
         else:
             print("***** wrong parameter! *****")

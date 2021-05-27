@@ -120,6 +120,7 @@ def main(vdiGroup):
                 if vm != "summary":
                     if "master" in cloneStates[vm]:
                         linkedMasters.append(cloneStates[vm]['master'])
+        linkedMasters = list(dict.fromkeys(linkedMasters))
         dbprint("Linked Masters:")
         dbprint(linkedMasters)
         

@@ -37,6 +37,7 @@ def getApiInfos(node, cloneVmid):
             apiInfos['dateOfCreation'] = descriptionJSON["dateOfCreation"]
             apiInfos['cloop'] = descriptionJSON["cloop"]
             apiInfos['buildstate'] = descriptionJSON["buildstate"]
+            apiInfos['master'] = descriptionJSON["master"]
             apiInfos['lastConnectionRequestUser'] = descriptionJSON['lastConnectionRequestUser']
             apiInfos['lastConnectionRequestTime'] = descriptionJSON['lastConnectionRequestTime']
             apiInfos.pop("description")

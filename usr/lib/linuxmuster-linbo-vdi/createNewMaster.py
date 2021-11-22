@@ -13,7 +13,7 @@ import re
 import time
 from datetime import datetime
 from proxmoxer import ProxmoxAPI
-from globalValues import node,getSchoolId,multischool,proxmox,dbprint,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
+from globalValues import node,getSchoolId,multischool,proxmox,dbprint,nmapPorts,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
 if vdiLocalService == False:
     from globalValues import ssh
 

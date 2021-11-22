@@ -13,7 +13,7 @@ import re
 import time
 from datetime import datetime
 from proxmoxer import ProxmoxAPI
-from globalValues import node,pool,proxmox,dbprint,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
+from globalValues import node,getSchoolId,multischool,proxmox,dbprint,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -50,7 +50,7 @@ def getMasterDescription(vdiGroup):
 
     dbprint(cloopValues)
     return cloopValues
-    dbprint("-----------------")
+dbprint("-----------------")
 
 # get alls VMIDs and checks returns first which doesnt exist on hv (no delete from oldest)
 def findNewVmid(masterNode, masterVmids):
@@ -66,11 +66,13 @@ def findNewVmid(masterNode, masterVmids):
             return vmid
     dbprint("*** No VMID available .. aborting. ***")
     return
-    #sys.exit()
+#sys.exit()
 
 
-def getDeviceConf(masterMac):
-    command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
+def getDeviceConf(devicePath, masterMac):
+    command = "cat " + devicePath
+    print(command
+            )
     devicesCsv = getCommandOutput(command)
     master = {}
     for line in devicesCsv:
@@ -86,8 +88,8 @@ def getDeviceConf(masterMac):
     return master
 
 
-def checkConsistence(masterHostname, masterIp, masterMAC):
-    command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
+def checkConsistence(devicePath, masterHostname, masterIp, masterMAC):
+    command = "cat " + devicePath
     devicesCsv = getCommandOutput(command)
     for line in devicesCsv:
         line = str(line)
@@ -105,15 +107,21 @@ def checkConsistence(masterHostname, masterIp, masterMAC):
         dbprint("*** PROBLEM: Hostname doesnt exist ***")
         dbprint("*** Exiting. ****")
         return
-        #sys.exit()
+    #sys.exit()
 
 
-def setLinboRemoteCommand(masterHostname):
+def setLinboRemoteCommand(schoolId, masterHostname):
     try:
-        command2 = "linbo-remote -i " + masterHostname + " -p partition,format,initcache:rsync,sync:1,start:1"
-        #ssh.exec_command(command2)
-        setCommand(command2)
-        dbprint("*** Linbo-Remote-Command is set... ***")
+        if multischool == True: # linbo-remote for one multischool school
+            command2 = "linbo-remote -s " + str(schoolId) + " -i " + masterHostname + " -p partition,format,initcache:rsync,sync:1,start:1"
+            setCommand(command2)
+            print(command2)
+            #dbprint("*** Linbo-Remote-Command is set... ***")
+        else:  # just default-school
+            command2 = "linbo-remote -i " + masterHostname + " -p partition,format,initcache:rsync,sync:1,start:1"
+            #ssh.exec_command(command2)
+            setCommand(command2)
+            dbprint("*** Linbo-Remote-Command is set... ***")
     except Exception as err:
         dbprint("*** SSH Problem: ***")
         dbprint(err)
@@ -126,9 +134,7 @@ def checkMAC(x):
         return 0
 
 
-def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,
-             masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
-             masterAudio, masterUSB, masterSpice):
+def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice):
     if checkMAC(masterMAC):
         dbprint("*** MAC is ok. ***")
     else:
@@ -137,25 +143,26 @@ def createVM(masterName, masterMAC, masterNode, masterVmid, masterPool, masterDe
     description = json.dumps(masterDesc)
 
     newContainer = {
-        'name': masterName,
-        'vmid': masterVmid,
-        'pool' : masterPool,
-        'description': description,
-        'bios': masterBios,
-        'boot': masterBoot,
-        'bootdisk': masterBootDisk,
-        'cores': masterCores,
-        'ostype': masterOsType,
-        'memory': masterMemory,
-        'storage': masterStorage,
-        'scsihw': masterScsiHw,
-        'scsi0': masterScsi0,
-        'net0': masterNet0,
-        'vga': masterDisplay,
-        'audio0': masterAudio,
-        'usb0': masterUSB,
-        'spice_enhancements': masterSpice
-    }
+            'name': masterName,
+            'vmid': masterVmid,
+            #'pool' : masterPool,
+            'description': description,
+            'bios': masterBios,
+            'boot': masterBoot,
+            #'bootdisk': masterBootDisk,
+            'cores': masterCores,
+            'ostype': masterOsType,
+            'memory': masterMemory,
+            'storage': masterStorage,
+            'scsihw': masterScsiHw,
+            'sata0' : masterSata0,
+            #'scsi0': masterScsi0,
+            'net0': masterNet0,
+            'vga': masterDisplay,
+            'audio0': masterAudio,
+            'usb0': masterUSB,
+            'spice_enhancements': masterSpice
+            }
     proxmox.nodes(masterNode).qemu.create(**newContainer)
     print("*** Master-VM with " + str(masterVmid) + " is being created... ***")
 
@@ -187,7 +194,7 @@ def waitForStatusRunning(proxmox, timeout, node, vmid):
     return False
 
 
-def checkNmap(masterNode, timeout, masterVmid, masterIP):
+def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
     check = waitForStatusRunning(proxmox, 15, masterNode, masterVmid)
     if check == True:
         startTime = time.time()
@@ -199,10 +206,10 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP):
         dbprint("*** Scanning for open ports on " + str(masterVmid) + " ***")
         scanner = nmap.PortScanner()
         while time.time() < terminate:
-            ports = {"RPC": 135,
-                     "SMB": 445,
-                     "SVCHOST": 49665
-                     }
+            #ports = {"RPC": 135,
+            #        "SMB": 445,
+            #        "SVCHOST": 49665
+            #        }
             # checkedTime = time.time() - (terminate - time.time())
             checkedTime = int(time.time() - startTime)
             print("*** Checked: " + str(checkedTime) + " from " + str(timeout) + " seconds ***")
@@ -212,6 +219,7 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP):
                     portscan = scanner.scan(masterIP, portStr)
                     status = portscan['scan'][masterIP]['tcp'][ports[key]]['state']
                     dbprint("Port " + key + " : " + status)
+                    print(status)
                     if status == "open":
                         dbprint("*** Windows Boot Check succesfully ***")
                         return True
@@ -237,12 +245,12 @@ def deleteFailedMaster(masterVmid):
                 proxmox.nodes(node).qemu(masterVmid).delete()
                 dbprint("deleted VM: " + str(masterVmid))
                 return
-                #sys.exit()
+            #sys.exit()
     except Exception as err:
         dbprint("*** May there is an Error for deleting Master " + str(masterVmid) + " ***")
         dbprint(err)
         return
-        #sys.exit()
+    #sys.exit()
 
 
 def prepareTemplate(masterNode, masterVmid):
@@ -251,7 +259,7 @@ def prepareTemplate(masterNode, masterVmid):
     if status == "running":
         proxmox.nodes(masterNode).qemu(masterVmid).status.shutdown.post()
     dbprint("*** Preparing VM to Template... ***")
-    if waitForStatusStoppped(proxmox, 40, masterNode, masterVmid) == True:
+    if waitForStatusStoppped(proxmox, 50, masterNode, masterVmid) == True:
         dbprint("*** Converting VM to Template and ... ***")
         proxmox.nodes(masterNode).qemu(masterVmid).template.post()
 
@@ -274,56 +282,67 @@ def waitForStatusStoppped(proxmox, timeout, node, vmid):
 def main(vdiGroup):
     dbprint("*** Creating new Master begins for Group " + vdiGroup + " begins ***")
 
-    masterInfos = getMasterDetails(vdiGroup)
-    masterName = masterInfos['name']
+    vdiGroupInfos = getMasterDetails(vdiGroup)
+
+    
+    schoolId = getSchoolId(vdiGroup)
+    devicePath = str
+    if schoolId != "" or schoolId != "default-school":
+        devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
+    else:
+        devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
+    
+    
+    
+    masterName = vdiGroupInfos['name']
     masterNode = node
-    masterVmids = masterInfos['vmids']
+    masterVmids = vdiGroupInfos['vmids']
     masterVmid = findNewVmid(masterNode, masterVmids)
-    masterPool = pool
-    masterBios = masterInfos['bios']
-    masterBoot = masterInfos['boot']
-    masterBootDisk = masterInfos['bootdisk']
-    masterCores = masterInfos['cores']
-    masterOsType = masterInfos['ostype']
-    masterStorage = masterInfos['storage']
-    masterScsiHw = masterInfos['scsihw']
-    #masterPool = masterInfos['pool']
-    masterSize = masterInfos['size']
-    masterFormat = masterInfos['format']
-    masterScsi0 = masterStorage + ":" + str(masterSize) + ",format=" + masterFormat
-    print(type(masterScsi0))
-    masterMemory = masterInfos['memory']
-    masterBridge = masterInfos['bridge']
-    masterMac = masterInfos['mac']
-    if "tag" in masterInfos:
-        masterTag = masterInfos['tag']
+    #masterPool = pool
+    masterBios = vdiGroupInfos['bios']
+    masterBoot = vdiGroupInfos['boot']
+    masterBootDisk = vdiGroupInfos['bootdisk']
+    masterCores = vdiGroupInfos['cores']
+    masterOsType = vdiGroupInfos['ostype']
+    masterStorage = vdiGroupInfos['storage']
+    masterScsiHw = vdiGroupInfos['scsihw']
+    #masterPool = vdiGroupInfos['pool']
+    masterSize = vdiGroupInfos['size']
+    masterFormat = vdiGroupInfos['format']
+    masterSata0 = masterStorage + ":" + str(masterSize) + ",format=" + masterFormat
+    #masterScsi0 = masterStorage + ":" + str(masterSize) + ",format=" + masterFormat
+    #print(type(masterScsi0))
+    masterMemory = vdiGroupInfos['memory']
+    masterBridge = vdiGroupInfos['bridge']
+    masterMac = vdiGroupInfos['mac']
+    if "tag" in vdiGroupInfos:
+        masterTag = vdiGroupInfos['tag']
         if masterTag != 0:
             masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac + ",tag=" + str(masterTag)
         else:
             masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac
     else:
         masterNet0 = "bridge=" + masterBridge + ",virtio=" + masterMac
-    masterDisplay = masterInfos['display']
-    masterAudio = masterInfos['audio']
-    masterUSB = masterInfos['usb0']
-    masterSpice = masterInfos['spice_enhancements']
-    timeout = masterInfos['timeout_building_master']
+    masterDisplay = vdiGroupInfos['display']
+    masterAudio = vdiGroupInfos['audio']
+    masterUSB = vdiGroupInfos['usb0']
+    masterSpice = vdiGroupInfos['spice_enhancements']
+    timeout = vdiGroupInfos['timeout_building_master']
     masterDescription = getMasterDescription(vdiGroup)
 
-    masterDeviceInfos = getDeviceConf(masterMac)
+    masterDeviceInfos = getDeviceConf(devicePath, masterMac)
     masterIp = masterDeviceInfos['ip']
     masterHostname = masterDeviceInfos['hostname']
 
-    checkConsistence(masterHostname, masterIp, masterMac)
+    checkConsistence(devicePath, masterHostname, masterIp, masterMac)
     # and set linbo-bittorrent restart??
-    setLinboRemoteCommand(masterHostname)  # and sets linbo-remote command
-    createVM(masterName, masterMac, masterNode, masterVmid, masterPool, masterDescription, masterBios, masterBoot, masterBootDisk, masterCores,
-             masterOsType, masterStorage, masterScsiHw, masterScsi0, masterMemory, masterNet0, masterDisplay,
-             masterAudio, masterUSB, masterSpice)
+    setLinboRemoteCommand(schoolId ,masterHostname)  # and sets linbo-remote command
+    createVM(masterName, masterMac, masterNode, masterVmid, masterDescription, masterBios, masterBoot, masterBootDisk, masterCores, masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice)
     startToPrepareVM(masterNode, masterVmid)  # start to get prepared by LINBO
 
     # if checkNmap succesful => change buildingstate finished and convert to template
-    if checkNmap(masterNode, timeout, masterVmid, masterIp) == True:  # check if windows bootet succesfully
+    ports = nmapPorts
+    if checkNmap(masterNode, timeout, masterVmid, masterIp, ports) == True:  # check if windows bootet succesfully
         masterDescription['buildstate'] = "finished"
         description = json.dumps(masterDescription)
         prepareTemplate(masterNode, masterVmid)  # convert VM to Template if stopped
@@ -341,3 +360,4 @@ def main(vdiGroup):
 
 if __name__ == "__main__":
     main(sys.argv[1])
+

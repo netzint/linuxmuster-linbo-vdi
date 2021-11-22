@@ -31,13 +31,11 @@ def sendConnection(node, vmid, user):
 
     ### send connection
     virtViewerDictionary = proxmox.nodes(node).qemu(vmid).spiceproxy.post(proxy=hvIp)
-    # ALS NAMEN HASH 8 stellig?
-    #config = str(random.getrandbits(64))
 
     timestamp = datetime.now()
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")
 
-    configFilePath = "/tmp/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
+    configFilePath = "/tmp/vdi/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
     print(configFile)
     with open(configFilePath, "w") as outfile:
         outfile.write("[virt-viewer]" + "\n")
@@ -56,7 +54,7 @@ def sendConnection(node, vmid, user):
     outfile.close()
 
     connectionconfig = {"configFile" : configFilePath}
-    return connectionconfig
+    return (json.dumps(connectionconfig))
 
 
 def main(arguments):
@@ -64,7 +62,7 @@ def main(arguments):
     group = arguments[1]
     requestUser = arguments[2]
 
-    vmStates = getVmStates.mainClones(group)
+    vmStates = getVmStates.mainClones(group,quiet=True)
     del vmStates['summary']
 
     ########################
@@ -76,16 +74,11 @@ def main(arguments):
         try:
             if vmStates[vmid]['buildstate'] == "finished":
                 if vmStates[vmid]['lastConnectionRequestUser'] == requestUser:
-                    ##and ( vmStates[vmid]['user'] == "" or (vmStates[vmid]['user']) == requestUser ):## could be asked too!: or ((vmStates[vmid]['user']).split('\\')[1]) == requestUser
-                        # double check:
-                        print(vmid)
+                        #print(vmid)
                         if  vmStates[vmid]['lastConnectionRequestTime'] != "":
                             passedTime = now - float(vmStates[vmid]['lastConnectionRequestTime'])
                             passedTime = 0
                             if float(passedTime) < float(timeoutConnectionRequest):
-                                sendConnection(node, vmid, requestUser)
-                                #print("*** Found already assigned desctop VM " + str(vmid) + " and sending Connection again ***")
-                                print(sendConnection(node, vmid, requestUser))
                                 return(sendConnection(node, vmid, requestUser))
         except Exception as err:
             #print(err) # => vm doenst exist => besser auf existierende loopen
@@ -102,15 +95,13 @@ def main(arguments):
             continue
     try:
         vmid = random.choice(neverUsedVmids)
-        #print(" *** Sending never used desctop VM:" + str(vmid) + " ***")
-        print(sendConnection(node, vmid, requestUser))
         return(sendConnection(node, vmid, requestUser))
     except Exception as err:
         #print(err)
         pass
 
 
-    print(float(timeoutConnectionRequest))
+    #print(float(timeoutConnectionRequest))
 
     ######### 3) try giving not any more used Vmid
     availableVmids = []
@@ -127,18 +118,15 @@ def main(arguments):
     try:
         vmid = random.choice(availableVmids)
         sendConnection(node, vmid, requestUser)
-        #dbprint("*** Found free desktop VM: " + str(vmid) + " ***")
-        #sys.exit()
-        print(sendConnection(node, vmid, requestUser))
         return(sendConnection(node, vmid, requestUser))
 
     except Exception as err:
         #print(err)
         pass
 
-    print("*** No desktop available ***")
-    print("*** Exiting. ***")
+    dbprint("*** No desktop available ***")
+    dbprint("*** Exiting. ***")
     sys.exit()
 
 if __name__ == "__main__":
-    main(sys.argv)
+    print(main(sys.argv))

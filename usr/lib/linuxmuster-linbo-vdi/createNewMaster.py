@@ -71,8 +71,6 @@ def findNewVmid(masterNode, masterVmids):
 
 def getDeviceConf(devicePath, masterMac):
     command = "cat " + devicePath
-    print(command
-            )
     devicesCsv = getCommandOutput(command)
     master = {}
     for line in devicesCsv:

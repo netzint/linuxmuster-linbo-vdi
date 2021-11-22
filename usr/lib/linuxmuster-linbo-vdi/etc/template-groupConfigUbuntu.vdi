@@ -1,0 +1,33 @@
+{
+"activated" : "yes",
+"vmids" : "410001,410002,410003",
+"bios" : "seabios",
+"boot" : "cn",
+"bootdisk" : "sata0,net0",
+"cores" : 4,
+"memory" : 4096,
+"ostype" : "l26",
+"name" : "lmn70.v02-master",
+"room" : "vdi",
+"hostname" : "v02-master",
+"group" : "ars_focal_bios_sata",
+"ip" : "10.1.50.1",
+"storage" : "vd-ssd-1900",
+"scsihw" : "virtio-scsi-pci",
+"size" : 55,
+"format" : "raw",
+"bridge" : "vmbr0",
+"tag" : 3050,
+"mac" : "AA:DD:4E:B5:5C:0i5",
+"display" : "type=qxl,memory=16",
+"audio" : "device=ich9-intel-hda,driver=spice",
+"usb0" : "host=spice,usb3=1",
+"spice_enhancements" : "foldersharing=1,videostreaming=all",
+"minimum_vms" : 1,
+"maxmimum_vms" : 3,
+"prestarted_vms" : 1,
+"timeout_building_master" : 750,
+"timeout_building_clone" : 400
+}
+
+

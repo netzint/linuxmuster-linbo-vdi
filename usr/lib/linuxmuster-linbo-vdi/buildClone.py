@@ -14,7 +14,7 @@ from datetime import datetime
 import sys
 import os
 from proxmoxer import ProxmoxAPI
-from globalValues import node,pool,dbprint,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
+from globalValues import node,dbprint,getSchoolId,multischool,nmapPorts,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -48,9 +48,8 @@ def findLatestMaster(masterNode, masterVmids):
 
 
 # calculates range of vmids and returns them
-def getVmidRange(masterGroup):
-    remotePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
-    output = getFileContent(remotePath)
+def getVmidRange(devicePath,masterGroup):
+    output = getFileContent(devicePath)
     vmidRange = []
     for line in output:
         if masterGroup in line:
@@ -61,12 +60,16 @@ def getVmidRange(masterGroup):
 
 
 # searches next available VMID fpr Clone and exits if doesnt exists
-def findNextAvailableVmid(masterGroup):
-    idRange = getVmidRange(masterGroup)
+def findNextAvailableVmid(devicePath,masterGroup):
+    idRange = getVmidRange(devicePath,masterGroup)
+    print(idRange)
+    
     for id in idRange:
+    
         if id != '':
             try:
-                proxmox.nodes('hv01').qemu(id).status.get()
+                proxmox.nodes(node).qemu(id).status.get()
+                print(id)
             except:
                 dbprint("*** Next free VM ID: " + str(id))
                 return id
@@ -104,10 +107,10 @@ def generateCloneDescription(vdiGroup, masterVmid, cloneName):
     return description
 
 
-def cloneMaster(masterNode, masterPool, masterVmid, cloneVmid, cloneName, cloneDescription):
+def cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription):
     description = json.dumps(cloneDescription)    ### important! sonst liest nur die Haelfte
     dbprint("*** Clone-VM-Name: " + cloneName + " ***")
-    proxmox.nodes(masterNode).qemu(masterVmid).clone.post(newid=cloneVmid,pool=masterPool,name=cloneName,description=description)
+    proxmox.nodes(masterNode).qemu(masterVmid).clone.post(newid=cloneVmid,name=cloneName,description=description)
     print("*** Template is getting cloned to VM with next free VM-ID: " + str(cloneVmid) + " ***")
 
 
@@ -124,8 +127,9 @@ def startClone(cloneNode, cloneVmid):
 
 
 ####### returns dict[] desctops{ vmid {ip : ip, mac : mac}}
-def getDeviceConf(masterGroup):
-    command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
+def getDeviceConf(devicePath,masterGroup):
+    #command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
+    command  = "cat " + str(devicePath)
     devicesCsv = getCommandOutput(command)
     desctops = {}
     for line in devicesCsv:
@@ -140,28 +144,29 @@ def getDeviceConf(masterGroup):
     return desctops
 
 
-# checks if windows bootet succesfully and waits specific time
-def checkNmap(timeout, cloneVmid, cloneIp):
+# checks if windows bootet succesfully and waits multischool time
+def checkNmap(timeout, cloneVmid, cloneIp, ports):
     terminate = time.time() + timeout
     scanner = nmap.PortScanner()
-    ports = {"RPC": 135,
-             "SMB": 445,
-             "SVCHOST": 49665
-             }
     dbprint("*** Scanning for open ports on " + cloneVmid + " ***")
     while time.time() < terminate:
-
-        for key in ports:
-            portStr = str(ports[key])
-            status = scanner.scan(cloneIp, portStr)
+        for port in ports:
+            #print(port)
+            status = scanner.scan(cloneIp, str(port))
             try:
-                status = status['scan'][cloneIp]['tcp'][ports[key]]['state']
-                dbprint("*** - Port " + key + " :" + status + " ***")
+                status = status['scan'][cloneIp]['tcp'][str(port)]['state']
+                dbprint("*** - Port " + str(port) + " :" + status + " ***")
+                #print(status)
                 if status == "open":
                     dbprint("*** Found open port! ***")
                     return True
             except Exception as err:
-                dbprint("*** Waiting for ping to " + cloneIp + " ***")
+                if err == str(cloneIp):
+                    return True
+                else:
+                    print(" NMAP Error: ")
+                    print(err)
+                    dbprint("*** Waiting for ping to " + cloneIp + " ***")
     return False
 
 
@@ -181,30 +186,38 @@ def waitForStatusRunning(timeout, cloneNode, cloneVmid):
 def main(vdiGroup):
 
 # get basic information:
-    masterInfos = getMasterDetails(vdiGroup)
+    vdiGroupInfos = getMasterDetails(vdiGroup)
     masterNode = node
-    masterName = masterInfos['name']
-    masterVmids = masterInfos['vmids']
+    masterName = vdiGroupInfos['name']
+    masterVmids = vdiGroupInfos['vmids']
     masterVmid = findLatestMaster(masterNode, masterVmids)
     masterGroup = vdiGroup
-    masterBridge = masterInfos['bridge']
-    masterPool = pool
+    masterBridge = vdiGroupInfos['bridge']
+    #masterPool = pool
 
+# get school environment and calculate devices path     
+    schoolId = getSchoolId(vdiGroup)
+    devicePath = str
+    if schoolId != "" or schoolId != "default-school":
+        devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
+    else:
+        devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
+    
 # fuer proxmox:
     cloneNode = masterNode
-    cloneVmid = findNextAvailableVmid(masterGroup)
+    cloneVmid = findNextAvailableVmid(devicePath,masterGroup)
     cloneNamePrefix = masterName.replace("master", "")
     cloneName = cloneNamePrefix + "clone-" + str(cloneVmid)
     cloneDescription = generateCloneDescription(vdiGroup, masterVmid, cloneName)
 
 # Cloning:
-    cloneMaster(masterNode, masterPool, masterVmid, cloneVmid, cloneName, cloneDescription)
+    cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription)
 
 # change correct MAC address:  ### change MAC  address as registered !!!! get net0 from master and only change mac  # net0 = bridge=vmbr0,virtio=62:0C:5A:A0:77:FF,tag=29
-    cloneConf = getDeviceConf(masterGroup)
+    cloneConf = getDeviceConf(devicePath, masterGroup)
     cloneMac = cloneConf[cloneVmid]['mac']
-    if "tag" in masterInfos:
-        masterTag = masterInfos['tag']
+    if "tag" in vdiGroupInfos:
+        masterTag = vdiGroupInfos['tag']
         if masterTag != 0:
             cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac + ",tag=" + str(masterTag)
         else:
@@ -226,10 +239,9 @@ def main(vdiGroup):
 # startClone:
     startClone(cloneNode, cloneVmid)
     cloneIp = cloneConf[cloneVmid]['ip']
-    timeoutBuilding = masterInfos['timeout_building_clone']
-
+    timeoutBuilding = vdiGroupInfos['timeout_building_clone']
 # if checkNmap succesful => change buildingstate finished
-    if checkNmap(timeoutBuilding, cloneVmid, cloneIp) == True:
+    if checkNmap(timeoutBuilding, cloneVmid, cloneIp, ports=nmapPorts) == True:
         cloneDescription['buildstate'] = "finished"
         description = json.dumps(cloneDescription)
         proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(description=description)
@@ -244,3 +256,4 @@ def main(vdiGroup):
 
 if __name__ == "__main__":
     main(sys.argv[1])
+

@@ -36,7 +36,6 @@ def sendConnection(node, vmid, user):
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")
 
     configFilePath = "/tmp/vdi/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
-    print(configFile)
     with open(configFilePath, "w") as outfile:
         outfile.write("[virt-viewer]" + "\n")
         outfile.write("type" + "=" + str(virtViewerDictionary["type"]) + "\n")

@@ -154,7 +154,7 @@ def checkNmap(timeout, cloneVmid, cloneIp, ports):
             #print(port)
             status = scanner.scan(cloneIp, str(port))
             try:
-                status = status['scan'][cloneIp]['tcp'][str(port)]['state']
+                status = status['scan'][cloneIp]['tcp'][int(port)]['state']
                 dbprint("*** - Port " + str(port) + " :" + status + " ***")
                 #print(status)
                 if status == "open":

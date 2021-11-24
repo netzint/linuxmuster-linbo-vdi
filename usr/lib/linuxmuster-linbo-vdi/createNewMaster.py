@@ -212,10 +212,9 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
             checkedTime = int(time.time() - startTime)
             print("*** Checked: " + str(checkedTime) + " from " + str(timeout) + " seconds ***")
             for key in ports:
-                portStr = str(ports[key])
                 try:
                     portscan = scanner.scan(masterIP, portStr)
-                    status = portscan['scan'][masterIP]['tcp'][ports[key]]['state']
+                    status = portscan['scan'][masterIP]['tcp'][int(ports[key])]['state']
                     dbprint("Port " + key + " : " + status)
                     print(status)
                     if status == "open":

@@ -1,3 +1,9 @@
+linuxmuster-linbo-vdi (0.90.22-1) lmn71; urgency=low
+
+  * First autobuild for lmn71
+
+ -- Andreas Till <andreas.till@netzint.de>  Fri, 11 Feb 2022 11:45:23 +0200
+
 linuxmuster-linbo-vdi (0.90.21-1) UNRELEASED; urgency=medium
 
   [ Joanna Meinelt ]

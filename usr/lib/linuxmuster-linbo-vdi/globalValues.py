@@ -14,6 +14,7 @@ import os
 import time
 import subprocess
 import configparser
+import logging
 
 # returns ssh and proxmox api connection and
 # returns global values
@@ -127,8 +128,13 @@ def nodeCheck():
         proxmox.nodes(node).status.get()
         return True
     except Exception as err:
-        print("*** Connection to Node failed! ***")
-        print(err)
+        logging.error("*** Connection to Node failed! ***")
+        errorcode = str(err).split(' ')[0]
+        if errorcode == '596':
+            logging.error(err)
+            logging.error('Possible wrong node name in vdiConfig.json')
+            quit()
+        logging.error(err)
         return False
 
 # check connections to hv and if remote to server

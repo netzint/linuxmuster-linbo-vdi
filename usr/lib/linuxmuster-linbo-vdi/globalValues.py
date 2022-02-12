@@ -26,8 +26,8 @@ global node
 node = vdiConfig['node']
 #global pool
 #pool = vdiConfig['pool']
-global mutlischool
-multischool = vdiConfig['multischool']
+#global mutlischool
+#multischool = vdiConfig['multischool']
 global hvIp
 hvIp = vdiConfig['hvIp']
 global hvUser
@@ -40,8 +40,8 @@ global vdiLocalService # True => running service on server VM,# False => remote
 vdiLocalService = vdiConfig['vdiLocalService']
 global debugging
 debugging = vdiConfig['debugging']
-global nmapPorts
-nmapPorts = vdiConfig['nmapPorts'].split(',')
+#global nmapPorts
+#nmapPorts = vdiConfig['nmapPorts'].split(',')
 
 # set debugging options
 def dbprint(println):

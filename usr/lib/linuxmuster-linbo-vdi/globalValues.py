@@ -64,8 +64,8 @@ proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
 # Remote/Local Functions:
 def getFileContent(pathToFile):
     if vdiLocalService == True:
-        output = open(pathToFile, 'r')
-        return output
+        reader = open(pathToFile, 'r')
+        return reader.read()
     elif vdiLocalService == False:
         sftp = ssh.open_sftp()
         output = sftp.open(pathToFile)
@@ -132,7 +132,7 @@ def nodeCheck():
         errorcode = str(err).split(' ')[0]
         if errorcode == '596':
             logging.error(err)
-            logging.error('Possible wrong node name in vdiConfig.json')
+            logging.error('Possible wrong node name in vdiConfig.json, must match nodename in proxmox!')
             quit()
         logging.error(err)
         return False

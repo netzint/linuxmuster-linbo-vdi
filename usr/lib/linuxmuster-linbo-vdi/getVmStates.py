@@ -16,6 +16,7 @@ import re
 import argparse
 import logging
 
+__version__ = 'version 0.90.22'
 
 ######## tries to get information from existing VMs (Clones):  ########
 def getApiInfos(node, cloneVmid):
@@ -428,7 +429,6 @@ def getApiInfosMaster(node,vmid):
 
 ######## if logedinuser has ip of vm, than user is set to vmid from vm ########
 def addUser(vmid, logedIn):
-
     for user in logedIn:
         if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
             dbprint(user)
@@ -751,20 +751,23 @@ def mainMaster(group="all", quiet=False):
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(description='getVmStats.py ')
     quiet = False
-    parser.add_argument('-m', '-master' dest='master', action='store_true', help='run as master')
+    parser.add_argument('-v', dest='version', action='store_true', help='print the version and exit')
+    parser.add_argument('-m', '-master', dest='master', action='store_true', help='run as master')
     parser.add_argument('-c', '-clones', dest='clones', action='store_true', help='update and push git tag')
     #parser.add_argument('-g', '--group', dest='group', action='store_true',help='adds group')
     parser.add_argument('group', nargs='?', default='all')
-    parser.add_argument('-q', '-quiet' dest='quiet', action='store_true', help='run as master')
+    parser.add_argument('-q', '-quiet', dest='quiet', action='store_true', help='run as master')
+    args = parser.parse_args()
 
     if args.version:
         print (__version__)
     if args.master is not False:
         mainMaster(args.group, quiet=args.quiet)
     if args.clones is not False:
-        mainClones(args.group quiet=args.quiet)
+        mainClones(args.group, quiet=args.quiet)
     else:
         parser.print_help()
     quit()

@@ -14,6 +14,7 @@ from datetime import datetime
 from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getCommandOutput,getVDIGroups,getSmbstatus
 import re
 import argparse
+import logging
 
 
 ######## tries to get information from existing VMs (Clones):  ########
@@ -790,35 +791,47 @@ def mainMaster(group="all", quiet=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='getVmStats.py ')
     quiet = False
-    parser.add_argument('-m', '--master' dest='master', action='store_true', help='run as master')
-    parser.add_argument('-c', '--clones', dest='tags', action='store_true', help='update and push git tag')
-    parser.add_argument('-g', '--group', dest='update', action='store_true',help='adds group')
+    parser.add_argument('-m', '-master' dest='master', action='store_true', help='run as master')
+    parser.add_argument('-c', '-clones', dest='clones', action='store_true', help='update and push git tag')
+    #parser.add_argument('-g', '--group', dest='group', action='store_true',help='adds group')
+    parser.add_argument('group', nargs='?', default='all')
+    parser.add_argument('-q', '-quiet' dest='quiet', action='store_true', help='run as master')
 
-    for x in range(len(sys.argv)):
-        if sys.argv[x] == "-quiet":
-            quiet = True
-
-    if sys.argv[1] == "-master":
-        if quiet == True:
-            mainMaster(quiet=True)
-        else:
-            mainMaster()
-    elif sys.argv[1] == "-clones":
-        if quiet == True:
-            mainClones(quiet=True)
-        else:
-            mainClones()
+    if args.version:
+        print (__version__)
+    if args.master is not False:
+        mainMaster(args.group, quiet=args.quiet)
+    if args.clones is not False:
+        mainClones(args.group quiet=args.quiet)
     else:
-        group = sys.argv[1]
-        if sys.argv[2] == "-master":
-            if quiet == True:
-                mainMaster(group, quiet=True)
-            else:
-                mainMaster(group)
-        elif sys.argv[2] == "-clones":
-            if quiet == True:
-                mainClones(group, quiet=True)
-            else:
-                mainClones(group)
-        else:
-            print("***** wrong parameter! *****")
+        parser.print_help()
+    quit()
+    
+    #for x in range(len(sys.argv)):
+    #    if sys.argv[x] == "-quiet":
+    #        quiet = True
+#
+    #if sys.argv[1] == "-master":
+    #    if quiet == True:
+    #        mainMaster(quiet=True)
+    #    else:
+    #        mainMaster()
+    #elif sys.argv[1] == "-clones":
+    #    if quiet == True:
+    #        mainClones(quiet=True)
+    #    else:
+    #        mainClones()
+    #else:
+    #    group = sys.argv[1]
+    #    if sys.argv[2] == "-master":
+    #        if quiet == True:
+    #            mainMaster(group, quiet=True)
+    #        else:
+    #            mainMaster(group)
+    #    elif sys.argv[2] == "-clones":
+    #        if quiet == True:
+    #            mainClones(group, quiet=True)
+    #        else:
+    #            mainClones(group)
+    #    else:
+    #        print("***** wrong parameter! *****")

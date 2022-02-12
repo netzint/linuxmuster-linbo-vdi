@@ -13,6 +13,7 @@ import sys
 from datetime import datetime
 from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getCommandOutput,getVDIGroups,getSmbstatus
 import re
+import argparse
 
 
 ######## tries to get information from existing VMs (Clones):  ########
@@ -787,8 +788,12 @@ def mainMaster(group="all", quiet=False):
 
 
 if __name__ == "__main__":
-
+    parser = argparse.ArgumentParser(description='getVmStats.py ')
     quiet = False
+    parser.add_argument('-m', '--master' dest='master', action='store_true', help='run as master')
+    parser.add_argument('-c', '--clones', dest='tags', action='store_true', help='update and push git tag')
+    parser.add_argument('-g', '--group', dest='update', action='store_true',help='adds group')
+
     for x in range(len(sys.argv)):
         if sys.argv[x] == "-quiet":
             quiet = True

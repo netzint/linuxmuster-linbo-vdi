@@ -11,7 +11,7 @@ import json
 import time
 import sys
 from datetime import datetime
-from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getCommandOutput,getVDIGroups,getSmbstatus
+from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,start_conf_loader,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
 import re
 import argparse
 import logging
@@ -500,18 +500,13 @@ def getGroupInfosMaster(devicePath, masterHostname):
 
 def getActualImagesize(devicePath, vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
-    output = getFileContent(devicePath)
-    cloopline = []
-    for line in output:
-        if "BaseImage" in line:
-            cloopline = line.split(' ')
-    cloop = cloopline[2].strip()
-
+    data = start_conf_loader(devicePath)
+    for os in data['os']:
+        cloop= os['BaseImage']
+    
     devicePathCloop = ("/srv/linbo/" + str(cloop) + ".info")
-    output2 = getFileContent(devicePathCloop)
-    # output2 = sftp.open(devicePathCloop)
-    lines = output2.readlines()
-    for line in lines:
+    info = getFileContent(devicePathCloop)
+    for line in info:
         linex = line.split("=")
         if "imagesize" in line:
             return linex[1].rstrip("\n")
@@ -756,17 +751,19 @@ if __name__ == "__main__":
     parser.add_argument('-v', dest='version', action='store_true', help='print the version and exit')
     parser.add_argument('-m', '-master', dest='master', action='store_true', help='run as master')
     parser.add_argument('-c', '-clones', dest='clones', action='store_true', help='update and push git tag')
-    #parser.add_argument('-g', '--group', dest='group', action='store_true',help='adds group')
     parser.add_argument('group', nargs='?', default='all')
     parser.add_argument('-q', '-quiet', dest='quiet', action='store_true', help='run as master')
     args = parser.parse_args()
 
     if args.version:
         print (__version__)
+        quit()
     if args.master is not False:
         mainMaster(args.group, quiet=args.quiet)
+        quit()
     if args.clones is not False:
         mainClones(args.group, quiet=args.quiet)
+        quit()
     else:
         parser.print_help()
     quit()

@@ -182,7 +182,6 @@ def mainClones(group = "all", quiet=False):
         vdiGroupInfos = getMasterDetails(vdiGroup)
 
         schoolId = getSchoolId(vdiGroup)
-        devicePath = str
         if schoolId != "" or schoolId != "default-school":
             devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
         else:

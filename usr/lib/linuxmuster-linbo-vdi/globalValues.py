@@ -62,13 +62,23 @@ global proxmox
 proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
 
 # Remote/Local Functions:
-def getFileContent(pathToFile):
+def getJsonFile(path_to_file):
     if vdiLocalService == True:
-        reader = open(pathToFile, 'r')
+        reader = open(path_to_file, 'r')
+        content = json.load(reader)
+        return content
+    elif vdiLocalService == False:
+        sftp = ssh.open_sftp()
+        output = sftp.open(path_to_file)
+        return output
+
+def getFileContent(path_to_file):
+    if vdiLocalService == True:
+        reader = open(path_to_file, 'r')
         return reader.read()
     elif vdiLocalService == False:
         sftp = ssh.open_sftp()
-        output = sftp.open(pathToFile)
+        output = sftp.open(path_to_file)
         return output
 
 # get command output from shell remote or local
@@ -93,8 +103,7 @@ def setCommand(command):
 def getMasterDetails(vdiGroup):
     try:
         startConf = "/srv/linbo/start.conf." + str(vdiGroup) + ".vdi"
-        output = getFileContent(startConf)
-        data = json.load(output)
+        data = getJsonFile(startConf)        
         return data
     except Exception as err:
         print(err)
@@ -106,7 +115,7 @@ def getSchoolId(vdiGroup):
         parser.read(linboGroupConfigPath)
         schoolId = parser['LINBO']['School']      
         return schoolId
-    except Error as err:
+    except Exception as err:
         print("Problem finding school ID")
         print(err)
 

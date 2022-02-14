@@ -10,7 +10,6 @@
 import json
 from datetime import datetime
 from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,start_conf_loader,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
-
 import argparse
 import logging
 
@@ -44,7 +43,7 @@ def getApiInfos(node, cloneVmid):
             apiInfos.pop("description")
             return apiInfos
         except Exception:
-            dbprint("***** Failed to assign description values. *****")  
+            logging.error("***** Failed to assign description values. *****")  
     except Exception as err:
         # print("Failed to load JSON or api access failed:")
         # print(err)
@@ -670,7 +669,7 @@ def mainMaster(group="all", quiet=False):
 
 
         ####### Get collected JSON Info File to all VMs from Group #############
-        #dbprint("*** ID Range for imagegroup: " + vdiGroup + " ***")
+        logging.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
         masterVmids = vdiGroupInfos['vmids'].split(',')
         masterName = vdiGroupInfos['hostname']
 

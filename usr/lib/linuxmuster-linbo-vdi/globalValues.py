@@ -105,8 +105,7 @@ def getFileContent(path_to_file):
             reader = open(path_to_file, 'r')
             return reader.read()
         else:
-            logging.error(path_to_file + ' not a file')
-        
+            logging.error(path_to_file + ' not a file')     
     elif vdiLocalService == False:
         sftp = ssh.open_sftp()
         output = sftp.open(path_to_file)
@@ -137,7 +136,7 @@ def getMasterDetails(vdiGroup):
         data = getJsonFile(startConf)        
         return data
     except Exception as err:
-        print(err)
+        logging.error(err)
 
 def getSchoolId(vdiGroup):
     try:
@@ -147,8 +146,8 @@ def getSchoolId(vdiGroup):
         schoolId = parser['LINBO']['School']      
         return schoolId
     except Exception as err:
-        print("Problem finding school ID")
-        print(err)
+        logging.error("Problem finding school ID")
+        logging.error(err)
 
 # check server connection
 def serverCheck():
@@ -157,10 +156,10 @@ def serverCheck():
             ssh.get_transport().is_active()
             return True
         else:
-            print("*** Connection to Server failed! ***")
+            logging.error("*** Connection to Server failed! ***")
             return False
     except Exception as err:
-        print(err)
+        logging.error(err)
 
 # check hv connection
 def nodeCheck():
@@ -187,7 +186,7 @@ def checkConnections():
             if nodeCheck() == True:
                 break
         else:
-            print("Waiting.")
+            logging.info("Waiting.")
             time.sleep(5)
 
 # get all vdi groups
@@ -247,6 +246,6 @@ def getSmbstatus(schoolId = "default-school"):
                                 logedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
                         return logedIn
             except Exception as err:
-                print("Some Error while net conf list to fileserver")
-                print(err)
+                logging.error("Some Error while net conf list to fileserver")
+                logging.error(err)
                 

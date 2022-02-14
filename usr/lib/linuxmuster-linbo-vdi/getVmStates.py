@@ -8,11 +8,9 @@
 
 
 import json
-import time
-import sys
 from datetime import datetime
 from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,start_conf_loader,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
-import re
+
 import argparse
 import logging
 
@@ -502,10 +500,15 @@ def getActualImagesize(devicePath, vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
     data = start_conf_loader(devicePath)
     for os in data['os']:
-        cloop= os['BaseImage']
+        cloop = os['BaseImage']
     
-    devicePathCloop = ("/srv/linbo/" + str(cloop) + ".info")
-    info = getFileContent(devicePathCloop)
+    if cloop.endswith('.cloop'):
+        devicePathImageInfo = "/srv/linbo/" + str(cloop) + ".info"
+    elif cloop.endswith('.qcow2'):
+        devicePathImageInfo = "/srv/linbo/images/" + cloop.split('.')[0] + '/' + cloop + ".info"
+    else:
+        logging.error('Unknown image format provided with '+ cloop)
+    info = getFileContent(devicePathImageInfo)
     for line in info:
         linex = line.split("=")
         if "imagesize" in line:

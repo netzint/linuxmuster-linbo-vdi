@@ -27,8 +27,8 @@ global node
 node = vdiConfig['node']
 #global pool
 #pool = vdiConfig['pool']
-#global mutlischool
-#multischool = vdiConfig['multischool']
+global mutlischool
+multischool = vdiConfig['multischool']
 global hvIp
 hvIp = vdiConfig['hvIp']
 global hvUser
@@ -41,8 +41,8 @@ global vdiLocalService # True => running service on server VM,# False => remote
 vdiLocalService = vdiConfig['vdiLocalService']
 global debugging
 debugging = vdiConfig['debugging']
-#global nmapPorts
-#nmapPorts = vdiConfig['nmapPorts'].split(',')
+global nmapPorts
+nmapPorts = vdiConfig['nmapPorts'].split(',')
 
 # set debugging options
 def dbprint(println):
@@ -72,32 +72,7 @@ def getJsonFile(path_to_file):
         output = sftp.open(path_to_file)
         return output
 
-def start_conf_loader(path_to_file):
-        if os.path.isfile(path_to_file):
-            opened = open(path_to_file, 'r')
-            data = {
-                'config': {},
-                'partitions': [],
-                'os': []
-            }
-            for line in opened:
-                line = line.split('#')[0].strip()
-                if line.startswith('['):
-                    section = {}
-                    section_name = line.strip('[]')
-                    if section_name == 'Partition':
-                        data['partitions'].append(section)
-                    elif section_name == 'OS':
-                        data['os'].append(section)
-                    else:
-                        data['config'][section_name] = section
-                elif '=' in line:
-                    k, v = line.split('=', 1)
-                    v = v.strip()
-                    if v in ['yes', 'no']:
-                        v = v == 'yes'
-                    section[k.strip()] = v
-            return data
+
 
 def getFileContent(path_to_file):
     if vdiLocalService == True:

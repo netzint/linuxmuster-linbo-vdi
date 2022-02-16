@@ -13,43 +13,39 @@ import re
 import time
 from datetime import datetime
 from proxmoxer import ProxmoxAPI
+import logging
+import vdi_common
 from globalValues import node,getSchoolId,multischool,proxmox,dbprint,nmapPorts,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
 if vdiLocalService == False:
     from globalValues import ssh
 
 # returns dict with cloop infos
 def getMasterDescription(vdiGroup):
-    cloopValues = {}
-    remotePath = "/srv/linbo/start.conf." + str(vdiGroup)
+    image_values = {}
+    devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
+    startConf_data = vdi_common.start_conf_loader(devicePath)
+    for os in startConf_data['os']:
+        image_name = os['BaseImage']
+    imageInfo = vdi_common.image_info_loader(image_name)
+    
     #output = sftp.open(remotePath)
-    output = getFileContent(remotePath)
-    cloopline = []
-    for line in output:
-        if "BaseImage" in line:
-            cloopline = line.split(' ')
-    cloop = cloopline[2].strip()
-    cloopValues["cloop"] = cloop
-    dbprint("-----------------")
-    dbprint(cloop)
 
-    remotePathCloop = ("/srv/linbo/" + str(cloop) + ".info")
-    dbprint(remotePathCloop)
-    output2 = getFileContent(remotePathCloop)
-    lines = output2.readlines()
-    for line in lines:
-        linex = line.split("=")
-        if "timestamp" in line:
-            cloopValues["timestamp"] = linex[1].rstrip("\n")
-        if "imagesize" in line:
-            cloopValues["imagesize"] = linex[1].rstrip("\n")
+    logging.info("-----------------")
+    logging.info(image_name)
+    imageInfo = vdi_common.image_info_loader(image_name)
+    
+    
+    image_values["timestamp"] = imageInfo["timestamp"]
+    image_values["imagesize"] = imageInfo["imagesize"]
+
 
     timestamp = datetime.now()
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")  # => "20201102141556"
-    cloopValues["dateOfCreation"] = dateOfCreation
-    cloopValues["buildstate"] = "building"
+    image_values["dateOfCreation"] = dateOfCreation
+    image_values["buildstate"] = "building"
 
-    dbprint(cloopValues)
-    return cloopValues
+    logging.info(image_values)
+    return image_values
 dbprint("-----------------")
 
 # get alls VMIDs and checks returns first which doesnt exist on hv (no delete from oldest)

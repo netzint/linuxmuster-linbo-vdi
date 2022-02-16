@@ -13,6 +13,7 @@ import subprocess
 import time
 import getVmStates
 import json
+import logging
 from deleteConnectionFiles import deleteDeprecatedFiles
 import createNewMaster,removeMaster,removeClone,buildClone
 from globalValues import checkConnections,vdiLocalService,dbprint,getVDIGroups,getMasterDetails

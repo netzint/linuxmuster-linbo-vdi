@@ -9,9 +9,11 @@
 
 import json
 from datetime import datetime
-from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,start_conf_loader,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
+from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
+import vdi_common
 import argparse
 import logging
+logging.basicConfig(level=logging.ERROR)
 
 __version__ = 'version 0.90.22'
 
@@ -50,35 +52,7 @@ def getApiInfos(node, cloneVmid):
         pass
 
 
-###### get api infos to master ######
-def getApiInfosMaster(node,vmid):
 
-    apiInfos = proxmox.nodes(node).qemu(vmid).config.get()     # => type = dict
-    description = apiInfos['description']
-
-    status = proxmox.nodes(node).qemu(vmid).status.current.get()
-    status = status['qmpstatus']
-    apiInfos["status"] = status
-
-    ##### split and separate description from descriptionf field from vm ######
-    try:
-        descriptionJSON = json.loads(description)
-        try:
-            apiInfos['dateOfCreation'] = descriptionJSON['dateOfCreation']
-            apiInfos['cloop'] = descriptionJSON['cloop']
-            apiInfos['timestamp'] = descriptionJSON['timestamp']
-            apiInfos['buildstate'] = descriptionJSON['buildstate']
-            apiInfos["imagesize"] = descriptionJSON['imagesize']
-            apiInfos.pop("description")
-            return apiInfos
-        except Exception as err:
-            dbprint(err)
-            dbprint("***** Failed to assign description values. *****")  
-            pass
-    except Exception as err:
-        # print("Failed to load JSON or api access failed:")
-        # print(err)
-        pass
 
 
 ######## if logedinuser has ip of vm, than user is set to vmid from vm ########
@@ -142,23 +116,6 @@ def getGroupInfosMaster(devicePath, masterHostname):
             vdiGroupInfos['pxe'] = line.split(';')[10]
     return vdiGroupInfos
 
-
-def getActualImagesize(devicePath, vdiGroup):
-    devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
-    output = getFileContent(devicePath)
-    cloopline = []
-    for line in output:
-        if "BaseImage" in line:
-            cloopline = line.split(' ')
-    cloop = cloopline[2].strip()
-
-    devicePathCloop = ("/srv/linbo/" + str(cloop) + ".info")
-    output2 = getFileContent(devicePathCloop)
-    lines = output2.readlines()
-    for line in lines:
-        linex = line.split("=")
-        if "imagesize" in line:
-            return linex[1].rstrip("\n")
 
 
 ####### CLONES: ########
@@ -398,29 +355,34 @@ def getApiInfosMaster(node,vmid):
     apiInfos = proxmox.nodes(node).qemu(vmid).config.get()     # => type = dict
     description = apiInfos['description']
 
-    status = proxmox.nodes(node).qemu(vmid).status.current.get()
-    status = status['qmpstatus']
-    apiInfos["status"] = status
+    try:
+        status = proxmox.nodes(node).qemu(vmid).status.current.get()
+        status = status['qmpstatus']
+        apiInfos["status"] = status
+    except Exception as err:
+        logging.error("Failed to load JSON or api access failed:")
+        logging.error(err)
+        pass
+
 
     ##### split and separate description from descriptionf field from vm ######
+    descriptionJSON = json.loads(description)
     try:
-        descriptionJSON = json.loads(description)
-        try:
-            apiInfos['dateOfCreation'] = descriptionJSON['dateOfCreation']
-            apiInfos['cloop'] = descriptionJSON['cloop']
-            apiInfos['timestamp'] = descriptionJSON['timestamp']
-            apiInfos['buildstate'] = descriptionJSON['buildstate']
-            apiInfos["imagesize"] = descriptionJSON['imagesize']
-            apiInfos.pop("description")
-            return apiInfos
-        except Exception as err:
-            dbprint(err)
-            dbprint("***** Failed to assign description values. *****")   # so tif error its shown immediately
-            pass
+        apiInfos['dateOfCreation'] = descriptionJSON['dateOfCreation']
+        apiInfos['cloop'] = descriptionJSON['cloop']
+        apiInfos['timestamp'] = descriptionJSON['timestamp']
+        apiInfos['buildstate'] = descriptionJSON['buildstate']
+        apiInfos["imagesize"] = descriptionJSON['imagesize']
+        apiInfos.pop("description")
+        return apiInfos
+    except KeyError as err:
+        logging.warning('Key '+ str(err) + ' not found in Machine description')
+        logging.warning("***** Failed to assign description values. *****")   # so tif error its shown immediately
     except Exception as err:
-        # print("Failed to load JSON or api access failed:")
-        print(err)
+        logging.error(err)
+        logging.error("***** Failed to assign description values. *****")   # so tif error its shown immediately
         pass
+
 
 
 ######## if logedinuser has ip of vm, than user is set to vmid from vm ########
@@ -497,21 +459,15 @@ def getGroupInfosMaster(devicePath, masterHostname):
 
 def getActualImagesize(devicePath, vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
-    data = start_conf_loader(devicePath)
-    for os in data['os']:
-        cloop = os['BaseImage']
+    startConf_data = vdi_common.start_conf_loader(devicePath)
     
-    if cloop.endswith('.cloop'):
-        devicePathImageInfo = "/srv/linbo/" + str(cloop) + ".info"
-    elif cloop.endswith('.qcow2'):
-        devicePathImageInfo = "/srv/linbo/images/" + cloop.split('.')[0] + '/' + cloop + ".info"
-    else:
-        logging.error('Unknown image format provided with '+ cloop)
-    info = getFileContent(devicePathImageInfo)
-    for line in info:
-        linex = line.split("=")
-        if "imagesize" in line:
-            return linex[1].rstrip("\n")
+    # TODO: Handle more than one os
+    for os in startConf_data['os']:
+        image_name = os['BaseImage']
+    imageInfo = vdi_common.image_info_loader(image_name)
+
+    return imageInfo['imagesize']
+
 
 
 ####### CLONES: ########

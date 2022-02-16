@@ -93,15 +93,14 @@ def generateCloneDescription(vdiGroup, masterVmid, cloneName):
     description['lastConnectionRequestTime'] = ""
     #description['user'] = ""
 
-    remotePath = "/srv/linbo/start.conf." + str(vdiGroup)
-    output = getFileContent(remotePath)
-    cloopline = []
-    for line in output:
-        if "BaseImage" in line:
-            cloopline = line.split(' ')
-    cloop = cloopline[2].strip()
+    devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
 
-    description["cloop"] = cloop
+    startConf_data = vdi_common.start_conf_loader(devicePath)
+    for os in startConf_data['os']:
+        image_name = os['BaseImage']
+
+
+    description["cloop"] = image_name
 
     description["buildstate"] = "building"
     return description

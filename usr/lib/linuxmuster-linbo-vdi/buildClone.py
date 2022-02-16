@@ -13,20 +13,23 @@ import time
 from datetime import datetime
 import sys
 import os
+import logging
 from proxmoxer import ProxmoxAPI
-from globalValues import node,dbprint,getSchoolId,multischool,nmapPorts,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
+from globalValues import node,getSchoolId,multischool,nmapPorts,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:
     from globalValues import ssh
 
-dbprint("*** Begin Cloning Master *** ")
+logger = logging.getLogger(__name__)
+
+#logger.info("*** Begin Cloning Master *** ")
 
 # calculates latest master and returns VMID
 def findLatestMaster(masterNode, masterVmids):
     timestampLatest = 0
     vmidLatest = 0
     vmids = masterVmids.split(',')
-    dbprint("*** all master vmids: ***")
-    dbprint(vmids)
+    logger.info("*** all master vmids: ***")
+    logger.info(vmids)
 
     for vmid in vmids:
         try:
@@ -40,9 +43,9 @@ def findLatestMaster(masterNode, masterVmids):
                     vmidLatest = vmid
         except Exception:
             pass
-    dbprint("*** Latest timestamp: ***")
-    dbprint("*** " + str(timestampLatest) + " ***")
-    dbprint("*** from Master " + str(vmidLatest)+ " ***")
+    logger.info("*** Latest timestamp: ***")
+    logger.info("*** " + str(timestampLatest) + " ***")
+    logger.info("*** from Master " + str(vmidLatest)+ " ***")
 
     return vmidLatest
 
@@ -71,9 +74,9 @@ def findNextAvailableVmid(devicePath,masterGroup):
                 proxmox.nodes(node).qemu(id).status.get()
                 print(id)
             except:
-                dbprint("*** Next free VM ID: " + str(id))
+                logger.info("*** Next free VM ID: " + str(id))
                 return id
-    dbprint("*** No VM ID left .. create on server! ***")
+    logger.info("*** No VM ID left .. create on server! ***")
     return
     #sys.exit()
 
@@ -83,8 +86,8 @@ def generateCloneDescription(vdiGroup, masterVmid, cloneName):
     description = {}
     timestamp = datetime.now()
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")         # => "20201102141556"
-    dbprint("*** Timestamp new Clone: ***")
-    dbprint("*** " + str(dateOfCreation) + " ***")
+    logger.info("*** Timestamp new Clone: ***")
+    logger.info("*** " + str(dateOfCreation) + " ***")
 
     description['name'] = cloneName
     description["dateOfCreation"] = dateOfCreation
@@ -108,7 +111,7 @@ def generateCloneDescription(vdiGroup, masterVmid, cloneName):
 
 def cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription):
     description = json.dumps(cloneDescription)    ### important! sonst liest nur die Haelfte
-    dbprint("*** Clone-VM-Name: " + cloneName + " ***")
+    logger.info("*** Clone-VM-Name: " + cloneName + " ***")
     proxmox.nodes(masterNode).qemu(masterVmid).clone.post(newid=cloneVmid,name=cloneName,description=description)
     print("*** Template is getting cloned to VM with next free VM-ID: " + str(cloneVmid) + " ***")
 
@@ -116,12 +119,12 @@ def cloneMaster(masterNode, masterVmid, cloneVmid, cloneName, cloneDescription):
 ####### starts clone and checks 10 Seconds if succesfully running
 def startClone(cloneNode, cloneVmid):
     proxmox.nodes(cloneNode).qemu(cloneVmid).status.start.post()
-    dbprint("*** VM started ***")
+    logger.info("*** VM started ***")
     try:
         if waitForStatusRunning(10,cloneNode, cloneVmid) == True:
-            dbprint("*** VM is running ***")
+            logger.info("*** VM is running ***")
     except Exception:
-        dbprint("*** VM couldn't get started, script is terminating.***")
+        logger.info("*** VM couldn't get started, script is terminating.***")
         return
 
 
@@ -139,7 +142,7 @@ def getDeviceConf(devicePath,masterGroup):
         if line.split(';')[2] == masterGroup:
             desctops[vmid] = {}
             desctops[vmid] = {"ip": ip, "mac": mac}
-    dbprint(desctops)
+    logger.info(desctops)
     return desctops
 
 
@@ -147,17 +150,17 @@ def getDeviceConf(devicePath,masterGroup):
 def checkNmap(timeout, cloneVmid, cloneIp, ports):
     terminate = time.time() + timeout
     scanner = nmap.PortScanner()
-    dbprint("*** Scanning for open ports on " + cloneVmid + " ***")
+    logger.info("*** Scanning for open ports on " + cloneVmid + " ***")
     while time.time() < terminate:
         for port in ports:
             #print(port)
             status = scanner.scan(cloneIp, str(port))
             try:
                 status = status['scan'][cloneIp]['tcp'][int(port)]['state']
-                dbprint("*** - Port " + str(port) + " :" + status + " ***")
+                logger.info("*** - Port " + str(port) + " :" + status + " ***")
                 #print(status)
                 if status == "open":
-                    dbprint("*** Found open port! ***")
+                    logger.info("*** Found open port! ***")
                     return True
             except Exception as err:
                 if err == str(cloneIp):
@@ -165,7 +168,7 @@ def checkNmap(timeout, cloneVmid, cloneIp, ports):
                 else:
                     print(" NMAP Error: ")
                     print(err)
-                    dbprint("*** Waiting for ping to " + cloneIp + " ***")
+                    logger.info("*** Waiting for ping to " + cloneIp + " ***")
     return False
 
 
@@ -177,8 +180,8 @@ def waitForStatusRunning(timeout, cloneNode, cloneVmid):
         if status == "running":
             return True
         time.sleep(2)
-        dbprint("*** Status: " + str(status) + " ***")
-        dbprint("*** waiting VM to run ... ***")
+        logger.info("*** Status: " + str(status) + " ***")
+        logger.info("*** waiting VM to run ... ***")
     return False
 
 
@@ -223,7 +226,7 @@ def main(vdiGroup):
             cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac
     else:
         cloneNet = "bridge=" + masterBridge + ",virtio=" + cloneMac
-    dbprint("*** Assigning MAC " + str(cloneMac) + " ***")
+    logger.info("*** Assigning MAC " + str(cloneMac) + " ***")
     proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(net0=cloneNet)
 
 # Lock removing - not tested:
@@ -244,13 +247,13 @@ def main(vdiGroup):
         cloneDescription['buildstate'] = "finished"
         description = json.dumps(cloneDescription)
         proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(description=description)
-        dbprint("*** Creating new Clone for group " + vdiGroup + " terminated succesfully. ****")
+        logger.info("*** Creating new Clone for group " + vdiGroup + " terminated succesfully. ****")
 # if checkNmap failed => change buildingstate failed
     else:
         cloneDescription['buildstate'] = "failed"
         description = json.dumps(cloneDescription)
         proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(description=description)
-        dbprint("*** Creating new Clone for group " + vdiGroup + " failed. Deleting ... ****")
+        logger.info("*** Creating new Clone for group " + vdiGroup + " failed. Deleting ... ****")
 
 
 if __name__ == "__main__":

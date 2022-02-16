@@ -10,11 +10,14 @@
 import random
 import string
 import sys
-from globalValues import node,dbprint,proxmox,hvIp,timeoutConnectionRequest
+from globalValues import node,proxmox,hvIp,timeoutConnectionRequest
 from getVmStates import mainClones
 import json
 from datetime import datetime
 import getVmStates
+
+logger = logging.getLogger(__name__)
+
 
 def sendConnection(node, vmid, user):
     ### change description
@@ -123,8 +126,8 @@ def main(arguments):
         #print(err)
         pass
 
-    dbprint("*** No desktop available ***")
-    dbprint("*** Exiting. ***")
+    logger.info("*** No desktop available ***")
+    logger.info("*** Exiting. ***")
     sys.exit()
 
 if __name__ == "__main__":

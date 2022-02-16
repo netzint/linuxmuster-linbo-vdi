@@ -9,13 +9,14 @@
 
 import json
 from datetime import datetime
-from globalValues import node,getSchoolId,proxmox,dbprint,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
+from globalValues import node,getSchoolId,proxmox,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
 import vdi_common
 import argparse
 import logging
-logging.basicConfig(level=logging.ERROR)
 
 __version__ = 'version 0.90.22'
+
+logger = logging.getLogger(__name__)
 
 ######## tries to get information from existing VMs (Clones):  ########
 def getApiInfos(node, cloneVmid):
@@ -60,9 +61,9 @@ def addUser(vmid, logedIn):
 
     for user in logedIn:
         if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-            dbprint(user)
+            logger.info(user)
             allallInfos[vmid]["user"] = user
-            dbprint(allallInfos[vmid]["user"])
+            logger.info(allallInfos[vmid]["user"])
         else:
             allallInfos[vmid]["user"] = ""
 
@@ -213,7 +214,7 @@ def mainClones(group = "all", quiet=False):
                     elif allallInfos[vmid]['buildstate'] == "failed":
                         failed = failed + 1
                 except Exception as err:
-                    #dbprint(err)
+                    #logger.info(err)
                     pass
             except Exception as err:
                 #print(err)
@@ -238,11 +239,11 @@ def mainClones(group = "all", quiet=False):
 
     if group == "all":
         if not quiet:
-            dbprint(json.dumps(allallGroupInfos, indent=2))
+            logger.info(json.dumps(allallGroupInfos, indent=2))
         return allallGroupInfos
     else:
         if not quiet:
-            dbprint(json.dumps(allallInfos, indent=2))
+            logger.info(json.dumps(allallInfos, indent=2))
         return allallInfos
     
 
@@ -272,7 +273,7 @@ def mainMaster(group="all", quiet=False):
 
 
         ####### Get collected JSON Info File to all VMs from Group #############
-        #dbprint("*** ID Range for imagegroup: " + vdiGroup + " ***")
+        #logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
         masterVmids = vdiGroupInfos['vmids'].split(',')
         masterName = vdiGroupInfos['hostname']
 
@@ -287,7 +288,7 @@ def mainMaster(group="all", quiet=False):
             groupInfos['basic']['hostname'] = masterName
 
         allApiInfos = {}
-        #dbprint("*** Getting information to Masters from Group " + vdiGroup + " ***")
+        #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
         ####### get api Infos #######
         for vmid in masterVmids:
             #print(type(vmid)) # => 'str'
@@ -341,11 +342,11 @@ def mainMaster(group="all", quiet=False):
 
     if group == "all":
         if not quiet:
-            dbprint(json.dumps(allGroupInfos, indent=2))
+            logger.info(json.dumps(allGroupInfos, indent=2))
         return allGroupInfos
     else:
         if not quiet:
-            dbprint(json.dumps(groupInfos, indent=2))
+            logger.info(json.dumps(groupInfos, indent=2))
         return groupInfos
 
 
@@ -376,11 +377,11 @@ def getApiInfosMaster(node,vmid):
         apiInfos.pop("description")
         return apiInfos
     except KeyError as err:
-        logging.warning('Key '+ str(err) + ' not found in Machine description')
-        logging.warning("***** Failed to assign description values. *****")   # so tif error its shown immediately
+        logger.warning('Key '+ str(err) + ' not found in Machine description')
+        logger.warning("***** Failed to assign description values. *****")   # so tif error its shown immediately
     except Exception as err:
-        logging.error(err)
-        logging.error("***** Failed to assign description values. *****")   # so tif error its shown immediately
+        logger.error(err)
+        logger.error("***** Failed to assign description values. *****")   # so tif error its shown immediately
         pass
 
 
@@ -389,9 +390,9 @@ def getApiInfosMaster(node,vmid):
 def addUser(vmid, logedIn):
     for user in logedIn:
         if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-            dbprint(user)
+            logger.info(user)
             allallInfos[vmid]["user"] = user
-            dbprint(allallInfos[vmid]["user"])
+            logger.info(allallInfos[vmid]["user"])
         else:
             allallInfos[vmid]["user"] = ""
 
@@ -495,7 +496,7 @@ def mainClones(group = "all", quiet=False):
             devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
 
 ####### Get collected JSON Info File to all VMs from Group #############
-        #dbprint("***** ID Range for imagegroup: " + vdiGroup + " *****")
+        #logger.info("***** ID Range for imagegroup: " + vdiGroup + " *****")
         idRange = getVmidRange(devicePath,vdiGroup)
 
 ####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one list #######
@@ -566,7 +567,7 @@ def mainClones(group = "all", quiet=False):
                     elif allallInfos[vmid]['buildstate'] == "failed":
                         failed = failed + 1
                 except Exception as err:
-                    #dbprint(err)
+                    #logger.info(err)
                     pass
             except Exception as err:
                 #print(err)
@@ -591,11 +592,11 @@ def mainClones(group = "all", quiet=False):
 
     if group == "all":
         if not quiet:
-            dbprint(json.dumps(allallGroupInfos, indent=2))
+            logger.info(json.dumps(allallGroupInfos, indent=2))
         return allallGroupInfos
     else:
         if not quiet:
-            dbprint(json.dumps(allallInfos, indent=2))
+            logger.info(json.dumps(allallInfos, indent=2))
         return allallInfos
     
 
@@ -625,7 +626,7 @@ def mainMaster(group="all", quiet=False):
 
 
         ####### Get collected JSON Info File to all VMs from Group #############
-        logging.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
+        logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
         masterVmids = vdiGroupInfos['vmids'].split(',')
         masterName = vdiGroupInfos['hostname']
 
@@ -640,7 +641,7 @@ def mainMaster(group="all", quiet=False):
             groupInfos['basic']['hostname'] = masterName
 
         allApiInfos = {}
-        #dbprint("*** Getting information to Masters from Group " + vdiGroup + " ***")
+        #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
         ####### get api Infos #######
         for vmid in masterVmids:
             #print(type(vmid)) # => 'str'
@@ -694,15 +695,16 @@ def mainMaster(group="all", quiet=False):
 
     if group == "all":
         if not quiet:
-            dbprint(json.dumps(allGroupInfos, indent=2))
+            logger.debug(json.dumps(allGroupInfos, indent=2))
         return allGroupInfos
     else:
         if not quiet:
-            dbprint(json.dumps(groupInfos, indent=2))
+            logger.debug(json.dumps(groupInfos, indent=2))
         return groupInfos
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.ERROR)
 
     parser = argparse.ArgumentParser(description='getVmStats.py ')
     quiet = False

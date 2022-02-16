@@ -12,9 +12,13 @@ import sys
 import operator
 import time
 import random
+import logging
 from getVmStates import mainClones
 from datetime import datetime
-from globalValues import node,dbprint,proxmox,getMasterDetails,timeoutConnectionRequest
+from globalValues import node,proxmox,getMasterDetails,timeoutConnectionRequest
+
+logger = logging.getLogger(__name__)
+
 
 def getAssignedIDs(cloneStates):
     assignedIDs = []
@@ -40,12 +44,12 @@ def getLastConnectionTimes(cloneStates):
     #print(cloneStates)
     for vmid in cloneStates:
          if (cloneStates[vmid]['lastConnectionRequestTime']) != "":
-             dbprint(vmid)
+             logger.info(vmid)
              connectionTimes[vmid] = (cloneStates[vmid]['lastConnectionRequestTime'])
 
     connectionTimesSorted = {k: v for k, v in sorted(connectionTimes.items(), key=operator.itemgetter(1))}
-    dbprint("sorted:")
-    dbprint(connectionTimesSorted)
+    logger.info("sorted:")
+    logger.info(connectionTimesSorted)
         #### oder über oldest timestamp?:####
         # oldest = min(connectionTimes, key=connectionTimes.get)
         # print("Oldest:")
@@ -69,9 +73,9 @@ def findLatestMasterTimestamp(masterNode, masterVmids):
         except Exception as err:
             #pass # =falsch!
             continue
-    dbprint("*** Latest timestamp: ***")
-    dbprint("*** " + str(timestampLatest) + " ***")
-    dbprint("*** from Master " + str(vmidLatest)+ " ***")
+    logger.info("*** Latest timestamp: ***")
+    logger.info("*** " + str(timestampLatest) + " ***")
+    logger.info("*** from Master " + str(vmidLatest)+ " ***")
 
     return timestampLatest
 
@@ -82,24 +86,24 @@ def waitForStatusStoppped(proxmox, timeout, node, vmid):
         status = proxmox.nodes(node).qemu(vmid).status.current.get()
         status = status['qmpstatus']
         if status == "stopped":
-            dbprint("*** VM " + str(vmid) + " stopped. ***")
+            logger.info("*** VM " + str(vmid) + " stopped. ***")
             return True
         else:
-            dbprint("*** waiting VM to going down... ***")
+            logger.info("*** waiting VM to going down... ***")
             time.sleep(5)
-    dbprint("*** ERROR: VM couldn't get going down. ***")
+    logger.info("*** ERROR: VM couldn't get going down. ***")
     return False
 
 
 def main(vdiGroup):
 
-    dbprint("*** Begin removeClone.py ***")
+    logger.info("*** Begin removeClone.py ***")
     # get removeable Clones
         # Alternative: cloneStates = getCloneStates(vdiGroup)  # assigned VMs direkt hier erst garnicht einlesen?
     cloneStates = mainClones(vdiGroup)
     del cloneStates['summary']
-    dbprint("-------------Clone states::: -----")
-    dbprint(json.dumps(cloneStates, indent=2))
+    logger.info("-------------Clone states::: -----")
+    logger.info(json.dumps(cloneStates, indent=2))
     assignedIDs = getAssignedIDs(cloneStates)
     removevableStates ={}
     for vmid in cloneStates:
@@ -107,12 +111,12 @@ def main(vdiGroup):
             removevableStates[vmid] = cloneStates[vmid]
 
     # Check Ausgabe
-    dbprint("*** Clone States: ***")
-    dbprint(cloneStates.keys())
-    dbprint("*** Assigned Clones: ***")
-    dbprint(assignedIDs)
-    dbprint("*** Removeable Clones: ***")
-    dbprint(removevableStates.keys())
+    logger.info("*** Clone States: ***")
+    logger.info(cloneStates.keys())
+    logger.info("*** Assigned Clones: ***")
+    logger.info(assignedIDs)
+    logger.info("*** Removeable Clones: ***")
+    logger.info(removevableStates.keys())
 
     # get latest Master
     masterInfos = getMasterDetails(vdiGroup)
@@ -126,7 +130,7 @@ def main(vdiGroup):
                     status = removevableStates[vmid]['status']
                     if status == "running":
                         proxmox.nodes(node).qemu(vmid).status.stop.post()
-                        dbprint("*** Clone " + str(vmid) + " is getting stopped.***")
+                        logger.info("*** Clone " + str(vmid) + " is getting stopped.***")
                         if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
                             try:
                                 proxmox.nodes(node).qemu(vmid).delete()
@@ -134,16 +138,16 @@ def main(vdiGroup):
                                 return
                                 #sys.exit()
                             except Exception as err:
-                                dbprint("Deleting error:")
-                                dbprint(err)
+                                logger.info("Deleting error:")
+                                logger.info(err)
                     else:
                         proxmox.nodes(node).qemu(vmid).delete()
                         print("*** Deleting failed VM: " + str(vmid) + " ***")
                         return
                         #sys.exit()
                 except Exception as err:
-                    dbprint(err)
-    dbprint("*** No failed VMs exists ***")
+                    logger.info(err)
+    logger.info("*** No failed VMs exists ***")
 
     # search for failed VMs in building State for more than 10 min:
     for vmid in removevableStates:
@@ -155,7 +159,7 @@ def main(vdiGroup):
                     status = removevableStates[vmid]['status']
                     if status == "running":
                         proxmox.nodes(node).qemu(vmid).status.stop.post()
-                        dbprint("*** Clone " + str(vmid) + " is getting stopped.***")
+                        logger.info("*** Clone " + str(vmid) + " is getting stopped.***")
                         if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
                             try:
                                 proxmox.nodes(node).qemu(vmid).delete()
@@ -163,28 +167,28 @@ def main(vdiGroup):
                                 return
                                 #sys.exit()
                             except Exception as err:
-                                dbprint("Deleting error:")
-                                dbprint(err)
+                                logger.info("Deleting error:")
+                                logger.info(err)
                     else:
                         proxmox.nodes(node).qemu(vmid).delete()
                         print("*** Deleting failed building VM: " + str(vmid) + " ***")
                         return
                         #sys.exit()
                 except Exception as err:
-                    dbprint(err)
-    dbprint("*** No failed building VMs exists ***")
+                    logger.info(err)
+    logger.info("*** No failed building VMs exists ***")
 
     # if cloop deprecated:
     for vmid in removevableStates:
             dateOfCreation = float(removevableStates[vmid]['dateOfCreation'])
             if dateOfCreation <= float(timestampLatestMaster):
-                dbprint("*** Found deprecated Clone: ***")
-                dbprint(vmid)
+                logger.info("*** Found deprecated Clone: ***")
+                logger.info(vmid)
                 try:
                     status = removevableStates[vmid]['status']
                     if status == "running":
                         proxmox.nodes(node).qemu(vmid).status.stop.post()
-                        dbprint("*** Clone " + str(vmid) + " is getting stopped. ***")
+                        logger.info("*** Clone " + str(vmid) + " is getting stopped. ***")
                         if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
                             try:
                                 proxmox.nodes(node).qemu(vmid).delete()
@@ -192,14 +196,14 @@ def main(vdiGroup):
                                 return
                             except Exception as err:
                                 print("*** Deleting error: ***")
-                                dbprint(err)
+                                logger.info(err)
                     else:
                         proxmox.nodes(node).qemu(vmid).delete()
                         print("*** Deleting deprecated VM: " + str(vmid) + " ***")
                         return
                 except Exception as err:
-                    dbprint(err)
-    dbprint("*** No deprecated VMs exists ***")
+                    logger.info(err)
+    logger.info("*** No deprecated VMs exists ***")
     # if vm lastConnectionTime is high
     connectionTimes = getLastConnectionTimes(removevableStates)
     for vmid in connectionTimes:
@@ -207,25 +211,25 @@ def main(vdiGroup):
                     status = removevableStates[vmid]['status']
                     if status == "running":
                         proxmox.nodes(node).qemu(vmid).status.stop.post()
-                        dbprint("*** Clone " + str(vmid) + " is getting stopped.***")
+                        logger.info("*** Clone " + str(vmid) + " is getting stopped.***")
                         if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
                             try:
                                 proxmox.nodes(node).qemu(vmid).delete()
                                 print("*** Deleting VM with hightes last Connection : " + str(vmid) + " ***")
                                 return
                             except Exception as err:
-                                dbprint("Deleting error:")
-                                dbprint(err)
+                                logger.info("Deleting error:")
+                                logger.info(err)
                     else:
                         try:
                             proxmox.nodes(node).qemu(vmid).delete()
                             print("*** Deleting VM with hightes last Connection: " + str(vmid) + " ***")
                             return
                         except Exception as err:
-                            dbprint("*** Deleting error: ***")
-                            dbprint(err)
+                            logger.info("*** Deleting error: ***")
+                            logger.info(err)
                 except Exception as err:
-                    dbprint(err)
+                    logger.info(err)
 
     # deleting random removeable
 
@@ -234,28 +238,28 @@ def main(vdiGroup):
         status = removevableStates[vmid]['status']
         if status == "running":
             proxmox.nodes(node).qemu(vmid).status.stop.post()
-            dbprint("*** Clone " + str(vmid) + " is getting stopped.***")
+            logger.info("*** Clone " + str(vmid) + " is getting stopped.***")
             if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
                 try:
                     proxmox.nodes(node).qemu(vmid).delete()
                     print("*** Deleting random removeable VM: " + str(vmid) + " ***")
                     return
                 except Exception as err:
-                    dbprint("Deleting error:")
-                    dbprint(err)
+                    logger.info("Deleting error:")
+                    logger.info(err)
         else:
             try:
                 proxmox.nodes(node).qemu(vmid).delete()
                 print("*** Deleting random removeable VM: " + str(vmid) + " ***")
                 return
             except Exception as err:
-                dbprint("*** Deleting error: ***")
-                dbprint(err)
+                logger.info("*** Deleting error: ***")
+                logger.info(err)
     except Exception as err:
-        dbprint(err)
+        logger.info(err)
 
-    dbprint("*** No deletable VMs exists ***")
-    dbprint("*** Exiting. ***")
+    logger.info("*** No deletable VMs exists ***")
+    logger.info("*** Exiting. ***")
 
 
 if __name__ == "__main__":

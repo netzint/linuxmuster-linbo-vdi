@@ -15,9 +15,12 @@ from datetime import datetime
 from proxmoxer import ProxmoxAPI
 import logging
 import vdi_common
-from globalValues import node,getSchoolId,multischool,proxmox,dbprint,nmapPorts,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
+from globalValues import node,getSchoolId,multischool,proxmox,nmapPorts,vdiLocalService,getMasterDetails,getFileContent,getCommandOutput,setCommand
 if vdiLocalService == False:
     from globalValues import ssh
+
+logger = logging.getLogger(__name__)
+
 
 # returns dict with cloop infos
 def getMasterDescription(vdiGroup):
@@ -46,21 +49,21 @@ def getMasterDescription(vdiGroup):
 
     logging.info(image_values)
     return image_values
-dbprint("-----------------")
+logger.info("-----------------")
 
 # get alls VMIDs and checks returns first which doesnt exist on hv (no delete from oldest)
 def findNewVmid(masterNode, masterVmids):
     vmids = masterVmids.split(',')
-    dbprint(vmids)
+    logger.info(vmids)
 
     for vmid in vmids:
         try:
             if proxmox.nodes(masterNode).qemu(vmid).status.get() != "":
-                dbprint("*** Existing: " + str(vmid))
+                logger.info("*** Existing: " + str(vmid))
         except Exception:
-            dbprint("*** Found useable VMID for Master : " + str(vmid) + " ***")
+            logger.info("*** Found useable VMID for Master : " + str(vmid) + " ***")
             return vmid
-    dbprint("*** No VMID available .. aborting. ***")
+    logger.info("*** No VMID available .. aborting. ***")
     return
 #sys.exit()
 
@@ -77,8 +80,8 @@ def getDeviceConf(devicePath, masterMac):
                 hostname = line.split(';')[1]
                 master = {"ip": ip, "hostname": hostname}
         except Exception as err:
-            dbprint(err)
-    dbprint(master)
+            logger.info(err)
+    logger.info(master)
     return master
 
 
@@ -91,15 +94,15 @@ def checkConsistence(devicePath, masterHostname, masterIp, masterMAC):
         if values[1] == masterHostname:
             if (values[3] == masterMAC):
                 if (values[4] == masterIp):
-                    dbprint("*** Master Configuration is consistent to devices.csv ***")
+                    logger.info("*** Master Configuration is consistent to devices.csv ***")
                     return True
                 else:
-                    dbprint("*** PROBLEM: IP doesnt match with Configuration ***")
+                    logger.info("*** PROBLEM: IP doesnt match with Configuration ***")
             else:
-                dbprint("*** PROBLEM: MAC doesnt match with Configuration ***")
+                logger.info("*** PROBLEM: MAC doesnt match with Configuration ***")
     else:
-        dbprint("*** PROBLEM: Hostname doesnt exist ***")
-        dbprint("*** Exiting. ****")
+        logger.info("*** PROBLEM: Hostname doesnt exist ***")
+        logger.info("*** Exiting. ****")
         return
     #sys.exit()
 
@@ -110,15 +113,15 @@ def setLinboRemoteCommand(schoolId, masterHostname):
             command2 = "linbo-remote -s " + str(schoolId) + " -i " + masterHostname + " -p partition,format,initcache:rsync,sync:1,start:1"
             setCommand(command2)
             print(command2)
-            #dbprint("*** Linbo-Remote-Command is set... ***")
+            #logger.info("*** Linbo-Remote-Command is set... ***")
         else:  # just default-school
             command2 = "linbo-remote -i " + masterHostname + " -p partition,format,initcache:rsync,sync:1,start:1"
             #ssh.exec_command(command2)
             setCommand(command2)
-            dbprint("*** Linbo-Remote-Command is set... ***")
+            logger.info("*** Linbo-Remote-Command is set... ***")
     except Exception as err:
-        dbprint("*** SSH Problem: ***")
-        dbprint(err)
+        logger.info("*** SSH Problem: ***")
+        logger.info(err)
 
 
 def checkMAC(x):
@@ -130,9 +133,9 @@ def checkMAC(x):
 
 def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice):
     if checkMAC(masterMAC):
-        dbprint("*** MAC is ok. ***")
+        logger.info("*** MAC is ok. ***")
     else:
-        dbprint("MAC not ok! Reenter.")
+        logger.info("MAC not ok! Reenter.")
 
     description = json.dumps(masterDesc)
 
@@ -168,9 +171,9 @@ def startToPrepareVM(masterNode, masterVmid):
             print("*** VM " + str(masterVmid) + " started and getting prepared by LINBO ***")
         return True
     except Exception as err:
-        dbprint("*** Failed to start Master VM ***")
-        dbprint(err)
-        dbprint("*** Failed Master is getting removed ***")
+        logger.info("*** Failed to start Master VM ***")
+        logger.info(err)
+        logger.info("*** Failed Master is getting removed ***")
         deleteFailedMaster(masterVmid)
 
 
@@ -183,8 +186,8 @@ def waitForStatusRunning(proxmox, timeout, node, vmid):
             print("*** VM is running ***")
             return True
         time.sleep(2)
-        dbprint(status)
-        dbprint("*** running and waiting for VM to get prepared by LINBO and boot ... ***")
+        logger.info(status)
+        logger.info("*** running and waiting for VM to get prepared by LINBO and boot ... ***")
     return False
 
 
@@ -192,12 +195,12 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
     check = waitForStatusRunning(proxmox, 15, masterNode, masterVmid)
     if check == True:
         startTime = time.time()
-        dbprint("Starttime: " + str(startTime))
+        logger.info("Starttime: " + str(startTime))
         terminate = startTime + timeout
         # terminate = startTime + timedelta(seconds=timeout)
-        dbprint("Ende " + str(terminate))
+        logger.info("Ende " + str(terminate))
 
-        dbprint("*** Scanning for open ports on " + str(masterVmid) + " ***")
+        logger.info("*** Scanning for open ports on " + str(masterVmid) + " ***")
         scanner = nmap.PortScanner()
         while time.time() < terminate:
             #ports = {"RPC": 135,
@@ -211,19 +214,19 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
                 try:
                     portscan = scanner.scan(masterIP, portStr)
                     status = portscan['scan'][masterIP]['tcp'][int(key)]['state']
-                    dbprint("Port " + key + " : " + status)
+                    logger.info("Port " + key + " : " + status)
                     print(status)
                     if status == "open":
-                        dbprint("*** Windows Boot Check succesfully ***")
+                        logger.info("*** Windows Boot Check succesfully ***")
                         return True
                 except Exception as err:
-                    dbprint(err)
+                    logger.info(err)
                     pass
             time.sleep(5)
         else:
-            dbprint("*** Windows Boot Check not succesfully ***")
+            logger.info("*** Windows Boot Check not succesfully ***")
     else:
-        dbprint("*** VM not running to check Ports ***")
+        logger.info("*** VM not running to check Ports ***")
         return False
 
 
@@ -233,15 +236,15 @@ def deleteFailedMaster(masterVmid):
         status = status['qmpstatus']
         if status == "running":
             proxmox.nodes(node).qemu(masterVmid).status.stop.post()
-            dbprint("*** Failed Master " + str(masterVmid) + " is getting stopped.***")
+            logger.info("*** Failed Master " + str(masterVmid) + " is getting stopped.***")
             if waitForStatusStoppped(proxmox, 20, node, masterVmid) == True:
                 proxmox.nodes(node).qemu(masterVmid).delete()
-                dbprint("deleted VM: " + str(masterVmid))
+                logger.info("deleted VM: " + str(masterVmid))
                 return
             #sys.exit()
     except Exception as err:
-        dbprint("*** May there is an Error for deleting Master " + str(masterVmid) + " ***")
-        dbprint(err)
+        logger.info("*** May there is an Error for deleting Master " + str(masterVmid) + " ***")
+        logger.info(err)
         return
     #sys.exit()
 
@@ -251,9 +254,9 @@ def prepareTemplate(masterNode, masterVmid):
     status = status['qmpstatus']
     if status == "running":
         proxmox.nodes(masterNode).qemu(masterVmid).status.shutdown.post()
-    dbprint("*** Preparing VM to Template... ***")
+    logger.info("*** Preparing VM to Template... ***")
     if waitForStatusStoppped(proxmox, 50, masterNode, masterVmid) == True:
-        dbprint("*** Converting VM to Template and ... ***")
+        logger.info("*** Converting VM to Template and ... ***")
         proxmox.nodes(masterNode).qemu(masterVmid).template.post()
 
 
@@ -263,17 +266,17 @@ def waitForStatusStoppped(proxmox, timeout, node, vmid):
         status = proxmox.nodes(node).qemu(vmid).status.current.get()
         status = status['qmpstatus']
         if status == "stopped":
-            dbprint("*** VM " + str(vmid) + " stopped. ***")
+            logger.info("*** VM " + str(vmid) + " stopped. ***")
             return True
         else:
-            dbprint("*** waiting VM to going down... ***")
+            logger.info("*** waiting VM to going down... ***")
             time.sleep(5)
-    dbprint("*** ERROR: VM couldn't get going down. ***")
+    logger.info("*** ERROR: VM couldn't get going down. ***")
     return False
 
 
 def main(vdiGroup):
-    dbprint("*** Creating new Master begins for Group " + vdiGroup + " begins ***")
+    logger.info("*** Creating new Master begins for Group " + vdiGroup + " begins ***")
 
     vdiGroupInfos = getMasterDetails(vdiGroup)
 
@@ -340,14 +343,14 @@ def main(vdiGroup):
         description = json.dumps(masterDescription)
         prepareTemplate(masterNode, masterVmid)  # convert VM to Template if stopped
         proxmox.nodes(masterNode).qemu(masterVmid).config.post(description=description)
-        dbprint("*** Creating new Template for group " + vdiGroup + " terminated succesfully. ****")
+        logger.info("*** Creating new Template for group " + vdiGroup + " terminated succesfully. ****")
     # if checkNmap failed => change buildingstate failed and getting removed
     else:
         masterDescription['buildstate'] = "failed"
         description = json.dumps(masterDescription)
         proxmox.nodes(masterNode).qemu(masterVmid).config.post(description=description)
-        dbprint("*** Creating new Template for group " + vdiGroup + " failed. ****")
-        dbprint("*** Failed Master is getting removed ***")
+        logger.info("*** Creating new Template for group " + vdiGroup + " failed. ****")
+        logger.info("*** Failed Master is getting removed ***")
         deleteFailedMaster(masterVmid)
 
 

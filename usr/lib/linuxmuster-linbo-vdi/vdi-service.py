@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 -u
+#!/usr/bin/env python3
 #
 # vdi-service.py
 #
@@ -27,7 +27,7 @@ if vdiLocalService == False:
 
 #logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.INFO)
 
-logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)s] - %(message)s',
+logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] - %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S',
     level=logging.INFO)
 

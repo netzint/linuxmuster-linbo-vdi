@@ -14,6 +14,7 @@ from datetime import datetime
 import sys
 import os
 import logging
+import vdi_common
 from proxmoxer import ProxmoxAPI
 from globalValues import node,getSchoolId,multischool,nmapPorts,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:

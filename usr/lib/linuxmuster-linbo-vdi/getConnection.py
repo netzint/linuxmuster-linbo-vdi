@@ -15,6 +15,7 @@ from getVmStates import mainClones
 import json
 from datetime import datetime
 import getVmStates
+import logging
 
 logger = logging.getLogger(__name__)
 

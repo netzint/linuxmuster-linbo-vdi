@@ -273,7 +273,7 @@ def mainMaster(group="all", quiet=False):
 
 
         ####### Get collected JSON Info File to all VMs from Group #############
-        #logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
+        logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
         masterVmids = vdiGroupInfos['vmids'].split(',')
         masterName = vdiGroupInfos['hostname']
 
@@ -288,7 +288,7 @@ def mainMaster(group="all", quiet=False):
             groupInfos['basic']['hostname'] = masterName
 
         allApiInfos = {}
-        #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
+        logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
         ####### get api Infos #######
         for vmid in masterVmids:
             #print(type(vmid)) # => 'str'
@@ -694,12 +694,8 @@ def mainMaster(group="all", quiet=False):
             allGroupInfos[vdiGroup] = groupInfos
 
     if group == "all":
-        if not quiet:
-            logger.debug(json.dumps(allGroupInfos, indent=2))
         return allGroupInfos
     else:
-        if not quiet:
-            logger.debug(json.dumps(groupInfos, indent=2))
         return groupInfos
 
 
@@ -719,10 +715,10 @@ if __name__ == "__main__":
         print (__version__)
         quit()
     if args.master is not False:
-        mainMaster(args.group, quiet=args.quiet)
+        print(json.dumps(mainMaster(args.group), indent=2))
         quit()
     if args.clones is not False:
-        mainClones(args.group, quiet=args.quiet)
+        print(json.dumps(mainClones(args.group), indent=2))
         quit()
     else:
         parser.print_help()

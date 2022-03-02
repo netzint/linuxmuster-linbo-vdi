@@ -153,16 +153,15 @@ def nodeCheck():
 
 # check connections to hv and if remote to server
 def checkConnections():
-    while True:
-        if vdiLocalService == False:
-            if serverCheck() == True and nodeCheck() == True:
-                break
-        elif vdiLocalService:
-            if nodeCheck() == True:
-                break
-        else:
-            logging.info("Waiting.")
-            time.sleep(5)
+    if vdiLocalService:
+        if nodeCheck() == True:
+            return True
+    if not vdiLocalService:
+        if serverCheck() == True and nodeCheck() == True:
+            return True
+    logging.info("Waiting.")
+    time.sleep(5)
+    return False
 
 # get all vdi groups
 def getVDIGroups():
@@ -181,20 +180,20 @@ def getVDIGroups():
     return vdiGroups
 
 
-###### returns dict{} logedIn{user : { ip : ip, domain : domain}
+###### returns dict{} loggedIn{user : { ip : ip, domain : domain}
 def getSmbstatus(schoolId = "default-school"):
     commandSmbstatus = "smbstatus | grep users"
     if schoolId == "default-school":
             smbstatus = getCommandOutput(commandSmbstatus)
-            logedIn = {}
+            loggedIn = {}
             for line in smbstatus:
                 line = str(line, 'ascii')
                 ip = line.split()[3]
                 user = line.split()[1]
                 domain, user = user.split("\\")
                 if line.split()[2] == "users":
-                    logedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
-            return logedIn
+                    loggedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
+            return loggedIn
     else:
             commandNetConfList = "net conf list"
             netconflist = getCommandOutput(commandNetConfList)
@@ -206,21 +205,24 @@ def getSmbstatus(schoolId = "default-school"):
                         suffix = "/" + schoolId + "\n"
                         fileserver = fileserver.rstrip(str(suffix))  
                         fileserver = fileserver.lstrip("//")
-                        sshSmbstatus = paramiko.SSHClient()
-                        sshSmbstatus.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                        sshSmbstatus.connect(fileserver, port=22, username='root', password=password)
-                        sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(commandSmbstatus)      
+                        with paramiko.SSHClient() as sshSmbstatus:
+
+                            sshSmbstatus.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                            sshSmbstatus.connect(fileserver, port=22, username='root', password=password)
+                            sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(commandSmbstatus)      
+
                         
-                        logedIn = {}
+                        loggedIn = {}
                         for line in sshSmbstatus_stdout.readlines():
                             #line = str(line, 'ascii')
                             ip = line.split()[4]
                             user = line.split()[1]
                             domain, user = user.split("\\")
                             if line.split()[3] == "users":
-                                logedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
-                        return logedIn
+                                loggedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
+                        return loggedIn
             except Exception as err:
                 logging.error("Some Error while net conf list to fileserver")
                 logging.error(err)
+                return
                 

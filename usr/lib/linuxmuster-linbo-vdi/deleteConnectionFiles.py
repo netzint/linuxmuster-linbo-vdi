@@ -33,4 +33,5 @@ def deleteDeprecatedFiles():
                     setCommand(command)
                 else:
                     logger.info(str(line) + " under 1 min")
+                return
 

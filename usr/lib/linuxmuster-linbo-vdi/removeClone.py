@@ -247,6 +247,8 @@ def main(vdiGroup):
                 except Exception as err:
                     logger.info("Deleting error:")
                     logger.info(err)
+                    return
+
         else:
             try:
                 proxmox.nodes(node).qemu(vmid).delete()
@@ -255,8 +257,10 @@ def main(vdiGroup):
             except Exception as err:
                 logger.info("*** Deleting error: ***")
                 logger.info(err)
+                return
     except Exception as err:
         logger.info(err)
+        return
 
     logger.info("*** No deletable VMs exists ***")
     logger.info("*** Exiting. ***")

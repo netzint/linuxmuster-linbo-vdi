@@ -64,7 +64,7 @@ def findNewVmid(masterNode, masterVmids):
             logger.info("*** Found useable VMID for Master : " + str(vmid) + " ***")
             return vmid
     logger.info("*** No VMID available .. aborting. ***")
-    return
+    return False
 #sys.exit()
 
 
@@ -130,38 +130,15 @@ def checkMAC(x):
     else:
         return 0
 
-
-def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice):
-    if checkMAC(masterMAC):
+#def createVM(masterName, masterMAC, masterNode, masterVmid, masterDesc, masterBios, masterBoot, masterBootDisk, masterCores,masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice):
+def createVM(parameters):
+    if checkMAC(parameters["masterMac"]):
         logger.info("*** MAC is ok. ***")
     else:
         logger.info("MAC not ok! Reenter.")
 
-    description = json.dumps(masterDesc)
-
-    newContainer = {
-            'name': masterName,
-            'vmid': masterVmid,
-            #'pool' : masterPool,
-            'description': description,
-            'bios': masterBios,
-            'boot': masterBoot,
-            #'bootdisk': masterBootDisk,
-            'cores': masterCores,
-            'ostype': masterOsType,
-            'memory': masterMemory,
-            'storage': masterStorage,
-            'scsihw': masterScsiHw,
-            'sata0' : masterSata0,
-            #'scsi0': masterScsi0,
-            'net0': masterNet0,
-            'vga': masterDisplay,
-            'audio0': masterAudio,
-            'usb0': masterUSB,
-            'spice_enhancements': masterSpice
-            }
-    proxmox.nodes(masterNode).qemu.create(**newContainer)
-    print("*** Master-VM with " + str(masterVmid) + " is being created... ***")
+    proxmox.nodes(parameters["masterNode"]).qemu.create(**parameters["newContainer"])
+    logger.info("*** Master-VM with " + str(parameters["newContainer"]["masterVmid"]) + " is being created... ***")
 
 
 def startToPrepareVM(masterNode, masterVmid):
@@ -294,6 +271,9 @@ def main(vdiGroup):
     masterNode = node
     masterVmids = vdiGroupInfos['vmids']
     masterVmid = findNewVmid(masterNode, masterVmids)
+    if not masterVmid:
+        logger.error("Error, no Master VM available")
+        return False
     #masterPool = pool
     masterBios = vdiGroupInfos['bios']
     masterBoot = vdiGroupInfos['boot']
@@ -324,7 +304,7 @@ def main(vdiGroup):
     masterUSB = vdiGroupInfos['usb0']
     masterSpice = vdiGroupInfos['spice_enhancements']
     timeout = vdiGroupInfos['timeout_building_master']
-    masterDescription = getMasterDescription(vdiGroup)
+    masterDescription = json.dumps(getMasterDescription(vdiGroup))
 
     masterDeviceInfos = getDeviceConf(devicePath, masterMac)
     masterIp = masterDeviceInfos['ip']
@@ -333,7 +313,33 @@ def main(vdiGroup):
     checkConsistence(devicePath, masterHostname, masterIp, masterMac)
     # and set linbo-bittorrent restart??
     setLinboRemoteCommand(schoolId ,masterHostname)  # and sets linbo-remote command
-    createVM(masterName, masterMac, masterNode, masterVmid, masterDescription, masterBios, masterBoot, masterBootDisk, masterCores, masterOsType, masterStorage, masterScsiHw, masterSata0, masterMemory, masterNet0, masterDisplay, masterAudio, masterUSB, masterSpice)
+    parameters={"masterNode":masterNode, "masterMac":masterMac,
+    "newContainer": {
+            'name': masterName,
+            'vmid': masterVmid,
+            #'pool' : masterPool,
+            'description': masterDescription,
+            'bios': masterBios,
+            'boot': masterBoot,
+            #'bootdisk': masterBootDisk,
+            'cores': masterCores,
+            'ostype': masterOsType,
+            'memory': masterMemory,
+            'storage': masterStorage,
+            'scsihw': masterScsiHw,
+            'sata0' : masterSata0,
+            #'scsi0': masterScsi0,
+            'net0': masterNet0,
+            'vga': masterDisplay,
+            'audio0': masterAudio,
+            'usb0': masterUSB,
+            'spice_enhancements': masterSpice
+            }
+    }
+
+
+
+    createVM(parameters)
     startToPrepareVM(masterNode, masterVmid)  # start to get prepared by LINBO
 
     # if checkNmap succesful => change buildingstate finished and convert to template

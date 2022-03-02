@@ -77,8 +77,8 @@ def findNextAvailableVmid(devicePath,masterGroup):
             except:
                 logger.info("*** Next free VM ID: " + str(id))
                 return id
-    logger.info("*** No VM ID left .. create on server! ***")
-    return
+    logger.warning("*** No Free VM ID left, add VMs in devices.csv on server! ***")
+    return False
     #sys.exit()
 
 
@@ -209,6 +209,8 @@ def main(vdiGroup):
 # fuer proxmox:
     cloneNode = masterNode
     cloneVmid = findNextAvailableVmid(devicePath,masterGroup)
+    if not cloneVmid:
+        return False
     cloneNamePrefix = masterName.replace("master", "")
     cloneName = cloneNamePrefix + "clone-" + str(cloneVmid)
     cloneDescription = generateCloneDescription(vdiGroup, masterVmid, cloneName)

@@ -250,7 +250,8 @@ def mainClones(group = "all", quiet=False):
 ####### MASTER: #######
 def mainMaster(group="all", quiet=False):
 
-    checkConnections()
+    while not checkConnections():
+        checkConnections()
     allGroups = []
     if group == "all":
         allGroups = getVDIGroups()
@@ -474,7 +475,8 @@ def getActualImagesize(devicePath, vdiGroup):
 ####### CLONES: ########
 def mainClones(group = "all", quiet=False):
 
-    checkConnections()
+    while not checkConnections():
+        checkConnections()
     allGroups = []
     if group == "all":
         allGroups = getVDIGroups()

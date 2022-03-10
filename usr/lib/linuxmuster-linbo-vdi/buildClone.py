@@ -79,7 +79,7 @@ def findNextAvailableVmid(devicePath,masterGroup):
                 return id
     logger.warning("*** No Free VM ID left for " + masterGroup + " , add VMs in devices.csv on server! ***")
     return False
-    #sys.exit()
+
 
 
 # defines description for clone

@@ -15,6 +15,7 @@ import time
 import subprocess
 import configparser
 import logging
+import csv
 
 # returns ssh and proxmox api connection and
 # returns global values
@@ -75,10 +76,20 @@ def getJsonFile(path_to_file):
 
 
 def getFileContent(path_to_file):
+    if path_to_file.endswith('.csv'):
+        with open (path_to_file, newline='') as csvfile:
+            list = []
+            reader = csv.reader(csvfile, delimiter=';')
+            for row in reader:
+                if row[0][0] == '#' or len(row) < 15:
+                    continue
+                list.append(row)
+            return list
+            #return reader
     if vdiLocalService == True:
         if os.path.isfile(path_to_file):
             reader = open(path_to_file, 'r')
-            return reader.read()
+            return reader
         else:
             logging.error(path_to_file + ' not a file')     
     elif vdiLocalService == False:

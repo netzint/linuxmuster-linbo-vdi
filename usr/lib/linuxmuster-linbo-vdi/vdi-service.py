@@ -26,10 +26,19 @@ if vdiLocalService == False:
     from globalValues import ssh
 
 #logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.INFO)
+level = "INFO"
 
-logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] - %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S',
-    level=logging.INFO)
+if level == "INFO":
+    logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] [l%(lineno)4s]- %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        level=logging.INFO)
+
+if level == "DEBUG":
+    logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] [l%(lineno)4s]- %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        level=logging.INFO)
+
+
 
 logger = logging.getLogger(__name__)
 

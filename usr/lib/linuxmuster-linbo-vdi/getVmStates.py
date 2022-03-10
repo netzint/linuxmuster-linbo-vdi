@@ -79,12 +79,12 @@ def mergeInfos(vmid, apiInfos, groupInfos):
 ####### get Collection of all VMs who are registered at school server #######
 def getVmidRange(devicePath,vdiGroup):
     output = getFileContent(devicePath)
-    #print("*** Check VM-ID-Range from Group ***")
+    logging.info("*** Check VM-ID-Range for Group "+ vdiGroup + " ***")
     vmidRange = []
     for line in output:
-        if vdiGroup in line:
-            if "master" not in line and line.split(';')[11] is not "":
-                vmid = line.split(';')[11]
+        if vdiGroup in line[2]:
+            if "master" not in line[1] and line[11] is not "":
+                vmid = line[11]
                 vmidRange.append(vmid)
     return vmidRange
 
@@ -94,13 +94,13 @@ def getGroupInfos(devicePath, vmid):
     output = getFileContent(devicePath)
     devicesInfos = {}
     for line in output:
-        if line.split(';')[11] == vmid:
-            devicesInfos['room'] = line.split(';')[0]
-            devicesInfos['hostname'] = line.split(';')[1]
-            devicesInfos['group'] = line.split(';')[2]
-            devicesInfos['mac'] = line.split(';')[3]
-            devicesInfos['ip'] = line.split(';')[4]
-            devicesInfos['pxe'] = line.split(';')[10]
+        if line[11] == vmid:
+            devicesInfos['room'] = line[0]
+            devicesInfos['hostname'] = line[1]
+            devicesInfos['group'] = line[2]
+            devicesInfos['mac'] = line[3]
+            devicesInfos['ip'] = line[4]
+            devicesInfos['pxe'] = line[10]
     return devicesInfos
 
 
@@ -108,13 +108,13 @@ def getGroupInfosMaster(devicePath, masterHostname):
     output = getFileContent(devicePath)
     vdiGroupInfos = {}
     for line in output:
-        if masterHostname in line:
-            vdiGroupInfos['room'] = line.split(';')[0]
-            vdiGroupInfos['hostname'] = line.split(';')[1]
-            vdiGroupInfos['group'] = line.split(';')[2]
-            vdiGroupInfos['mac'] = line.split(';')[3]
-            vdiGroupInfos['ip'] = line.split(';')[4]
-            vdiGroupInfos['pxe'] = line.split(';')[10]
+        if masterHostname in line[1]:
+            vdiGroupInfos['room'] = line[0]
+            vdiGroupInfos['hostname'] = line[1]
+            vdiGroupInfos['group'] = line[2]
+            vdiGroupInfos['mac'] = line[3]
+            vdiGroupInfos['ip'] = line[4]
+            vdiGroupInfos['pxe'] = line[10]
     return vdiGroupInfos
 
 
@@ -382,7 +382,7 @@ def getApiInfosMaster(node,vmid):
         logger.warning("***** Failed to assign description values. *****")   # so tif error its shown immediately
     except Exception as err:
         logger.error(err)
-        logger.error("***** Failed to assign description values. *****")   # so tif error its shown immediately
+        logger.error("***** Failed to assign description values. ******")   # so tif error its shown immediately
         pass
 
 
@@ -418,9 +418,9 @@ def getVmidRange(devicePath,vdiGroup):
     #print("*** Check VM-ID-Range from Group ***")
     vmidRange = []
     for line in output:
-        if vdiGroup in line:
-            if "master" not in line and line.split(';')[11] is not "":
-                vmid = line.split(';')[11]
+        if vdiGroup in line[2]:
+            if "master" not in line and line[11] is not "":
+                vmid = line[11]
                 vmidRange.append(vmid)
     return vmidRange
 
@@ -433,13 +433,13 @@ def getGroupInfos(devicePath, vmid):
     # output = sftp.open(devicePath)
     devicesInfos = {}
     for line in output:
-        if line.split(';')[11] == vmid:
-            devicesInfos['room'] = line.split(';')[0]
-            devicesInfos['hostname'] = line.split(';')[1]
-            devicesInfos['group'] = line.split(';')[2]
-            devicesInfos['mac'] = line.split(';')[3]
-            devicesInfos['ip'] = line.split(';')[4]
-            devicesInfos['pxe'] = line.split(';')[10]
+        if line[11] == vmid:        
+            devicesInfos['room'] = line[0]
+            devicesInfos['hostname'] = line[1]
+            devicesInfos['group'] = line[2]
+            devicesInfos['mac'] = line[3]
+            devicesInfos['ip'] = line[4]
+            devicesInfos['pxe'] = line[10]
     return devicesInfos
 
 
@@ -450,12 +450,12 @@ def getGroupInfosMaster(devicePath, masterHostname):
     vdiGroupInfos = {}
     for line in output:
         if masterHostname in line:
-            vdiGroupInfos['room'] = line.split(';')[0]
-            vdiGroupInfos['hostname'] = line.split(';')[1]
-            vdiGroupInfos['group'] = line.split(';')[2]
-            vdiGroupInfos['mac'] = line.split(';')[3]
-            vdiGroupInfos['ip'] = line.split(';')[4]
-            vdiGroupInfos['pxe'] = line.split(';')[10]
+            vdiGroupInfos['room'] = line[0]
+            vdiGroupInfos['hostname'] = line[1]
+            vdiGroupInfos['group'] = line[2]
+            vdiGroupInfos['mac'] = line[3]
+            vdiGroupInfos['ip'] = line[4]
+            vdiGroupInfos['pxe'] = line[10]
     return vdiGroupInfos
 
 
@@ -593,12 +593,13 @@ def mainClones(group = "all", quiet=False):
 ####### prints the whole JSON with all information #######
 
     if group == "all":
-        if not quiet:
-            logger.info(json.dumps(allallGroupInfos, indent=2))
+        # TODO check if this is needed
+        #if not quiet:
+        logger.debug(json.dumps(allallGroupInfos, indent=2))
         return allallGroupInfos
     else:
-        if not quiet:
-            logger.info(json.dumps(allallInfos, indent=2))
+        #if not quiet:
+        logger.debug(json.dumps(allallInfos, indent=2))
         return allallInfos
     
 

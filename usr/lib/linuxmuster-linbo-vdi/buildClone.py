@@ -56,9 +56,9 @@ def getVmidRange(devicePath,masterGroup):
     output = getFileContent(devicePath)
     vmidRange = []
     for line in output:
-        if masterGroup in line:
-            if "master" not in line.split(';')[1]:
-                vmid = line.split(';')[11]
+        if masterGroup in line[2]:
+            if "master" not in line[1]:
+                vmid = line[11]
                 vmidRange.append(vmid)
     return vmidRange
 
@@ -66,18 +66,18 @@ def getVmidRange(devicePath,masterGroup):
 # searches next available VMID fpr Clone and exits if doesnt exists
 def findNextAvailableVmid(devicePath,masterGroup):
     idRange = getVmidRange(devicePath,masterGroup)
-    print(idRange)
+    logger.info(idRange)
     
     for id in idRange:
     
         if id != '':
             try:
                 proxmox.nodes(node).qemu(id).status.get()
-                print(id)
+                logger.info(id)
             except:
                 logger.info("*** Next free VM ID: " + str(id))
                 return id
-    logger.warning("*** No Free VM ID left, add VMs in devices.csv on server! ***")
+    logger.warning("*** No Free VM ID left for " + masterGroup + " , add VMs in devices.csv on server! ***")
     return False
     #sys.exit()
 

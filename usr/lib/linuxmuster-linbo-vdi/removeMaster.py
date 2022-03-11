@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 # finds existing master VMs and sorts them by dateOfCreation
 # so the oldest can be deleted first
 # returns if no master found
-def findRemoveableMaster(masterStates, masterVmids):
-    removeables = {}
+def find_and_sort_Existing_Masters(masterStates, masterVmids):
+    existing_master = {}
     vmids = masterVmids.split(',')
     logger.info(vmids)
     for vmid in vmids:
@@ -33,24 +33,27 @@ def findRemoveableMaster(masterStates, masterVmids):
                 and masterStates[vmid] != "basic":
             try:
                 dateOfCreation = masterStates[vmid]['dateOfCreation']
-                removeables[vmid] = dateOfCreation
+                existing_master[vmid] = dateOfCreation
             except Exception:
                 pass
-    if len(removeables) == 0:
+    if len(existing_master) == 0:
         logger.info("*** No Master exists! ***")
         return
     logger.info("Removeable Masters:")
-    logger.info(removeables)
+    logger.info(existing_master)
 
-    if len(removeables) == 1:
+    if len(existing_master) == 0:
+        return False
+
+    if len(existing_master) == 1:
         logger.info("*** Just one Master exists ***")
-        return removeables
+        return existing_master
 
-    elif len(removeables) != 0 and len(removeables) >= 2:
+    elif len(existing_master) != 0 and len(existing_master) >= 2:
         # delete latest, because maybe there are still no Clones from the latest Master, and then it could be deleted
-        removeablesSorted = {k: v for k, v in sorted(removeables.items(), key=operator.itemgetter(1))}
-        logger.info(removeablesSorted)
-        return removeablesSorted
+        existing_masters_Sorted = {k: v for k, v in sorted(existing_master.items(), key=operator.itemgetter(1))}
+        logger.info(existing_masters_Sorted)
+        return existing_masters_Sorted
     return
 
 
@@ -75,7 +78,7 @@ def main(vdiGroup):
     masterGroupInfos = getMasterDetails(vdiGroup)
     timeoutBuildingMaster = masterGroupInfos['timeout_building_master']
     masterVmids = masterGroupInfos['vmids']
-    removeables = findRemoveableMaster(masterStates, masterVmids)
+    removeables = find_and_sort_Existing_Masters(masterStates, masterVmids)
 
     if (removeables is None):
         logger.info("*** No Master available from group " + str(vdiGroup) + " . ***")
@@ -100,8 +103,8 @@ def main(vdiGroup):
                         logger.info(" *** Stop failed ***")
                         # return 
                 try:
+                    logger.info("*** Try to delete VM which failed during building: " + str(vmid) + " ***")
                     proxmox.nodes(node).qemu(vmid).delete()
-                    logger.info("*** Try deleting failed at building VM: " + str(vmid) + " ***")
                     return
                 except Exception as err:
                     logger.info("*** Master " + str(vmid) + " cant get removed.***")

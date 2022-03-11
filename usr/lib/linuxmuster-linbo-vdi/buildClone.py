@@ -191,7 +191,7 @@ def main(vdiGroup):
 # get basic information:
     vdiGroupInfos = getMasterDetails(vdiGroup)
     masterNode = node
-    masterName = vdiGroupInfos['name']
+    masterName = vdiGroupInfos['name'] #master-name for vm on pve 
     masterVmids = vdiGroupInfos['vmids']
     masterVmid = findLatestMaster(masterNode, masterVmids)
     masterGroup = vdiGroup

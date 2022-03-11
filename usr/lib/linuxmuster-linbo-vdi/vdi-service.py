@@ -110,7 +110,7 @@ def handle_master(vdiGroups):
             logger.info("***** Existing Master(s): " + str(existingVmids) + " *****")
             logger.info("***** Latest Master: " + str(vmidLatest) + "*****")
             if masterStates[vmidLatest]['buildstate'] == "building":
-                logger.info("***** Master from " + str(group) + "is building *****")
+                logger.info("***** Master from " + str(group) + " is building *****")
                 break
             # check if cloop is up 2 date
             if not masterStates['basic']['actual_imagesize'] == masterStates[vmidLatest]['imagesize']:
@@ -189,4 +189,5 @@ def run_service():
         time.sleep(5)
 
 if __name__ == "__main__":
+    print ('test')
     run_service()

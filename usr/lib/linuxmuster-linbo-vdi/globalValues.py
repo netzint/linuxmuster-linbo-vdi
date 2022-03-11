@@ -34,8 +34,6 @@ global hvIp
 hvIp = vdiConfig['hvIp']
 global hvUser
 hvUser = vdiConfig['hvUser']
-global password
-password = vdiConfig['password']
 global timeoutConnectionRequest
 timeoutConnectionRequest = vdiConfig['timeoutConnectionRequest']
 global vdiLocalService # True => running service on server VM,# False => remote
@@ -45,10 +43,6 @@ debugging = vdiConfig['debugging']
 global nmapPorts
 nmapPorts = vdiConfig['nmapPorts'].split(',')
 
-# set debugging options
-def dbprint(println):
-    if debugging:
-        print (println)
 
 # set local or remote option
 if vdiLocalService == False:
@@ -57,10 +51,12 @@ if vdiLocalService == False:
     global ssh
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(serverIp, port=22, username='root', password=password)
+    ssh.connect(serverIp, port=22, username='root')
 
 global proxmox
-proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
+#proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
+proxmox = ProxmoxAPI(hvIp, user=hvUser,  backend='ssh_paramiko')
+
 
 # Remote/Local Functions:
 def getJsonFile(path_to_file):
@@ -217,9 +213,9 @@ def getSmbstatus(schoolId = "default-school"):
                         fileserver = fileserver.rstrip(str(suffix))  
                         fileserver = fileserver.lstrip("//")
                         with paramiko.SSHClient() as sshSmbstatus:
-
                             sshSmbstatus.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                            sshSmbstatus.connect(fileserver, port=22, username='root', password=password)
+                            sshSmbstatus.connect(fileserver, port=22, username='root')
+                            #ssh.connect(serverIp, port=22, username='root', pkey = ssh_key)
                             sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(commandSmbstatus)      
 
                         

@@ -371,7 +371,8 @@ def getApiInfosMaster(node,vmid):
     descriptionJSON = json.loads(description)
     try:
         apiInfos['dateOfCreation'] = descriptionJSON['dateOfCreation']
-        apiInfos['cloop'] = descriptionJSON['cloop']
+        # TODO: Check if cloop needed or what to do
+        #apiInfos['cloop'] = descriptionJSON['cloop']
         apiInfos['timestamp'] = descriptionJSON['timestamp']
         apiInfos['buildstate'] = descriptionJSON['buildstate']
         apiInfos["imagesize"] = descriptionJSON['imagesize']

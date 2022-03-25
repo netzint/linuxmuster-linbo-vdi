@@ -373,69 +373,6 @@ def getApiInfosMaster(node,vmid):
         pass
 
 
-
-
-######## merges all vm infos to one JSON and returns it with vmid ########
-def mergeInfos(vmid, apiInfos, groupInfos):
-    jsonObject = {}
-    # if apiInfos != {}:
-    #     if apiInfos['net0'][7:24] != groupInfos['mac']:
-    #         print("*** MAC Adresse von " + vmid + " stimmt nicht mit Liste ueberein! ***")
-    apiInfos.update(groupInfos)
-    jsonObject[vmid] = apiInfos
-    return jsonObject 
-
-
-####### get Collection of all VMs who are registered at school server #######
-def getVmidRange(devicePath,vdiGroup):
-    #sftp = ssh.open_sftp()
-    #devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
-    output = getFileContent(devicePath)
-    #output = sftp.open(devicePath)
-    #print("*** Check VM-ID-Range from Group ***")
-    vmidRange = []
-    for line in output:
-        if vdiGroup in line[2]:
-            if "master" not in line and line[11] is not "":
-                vmid = line[11]
-                vmidRange.append(vmid)
-    return vmidRange
-
-
-######## returns dict devicesInfos from devices list  ########
-def getGroupInfos(devicePath, vmid):
-    #sftp = ssh.open_sftp()
-    #devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
-    output = getFileContent(devicePath)
-    # output = sftp.open(devicePath)
-    devicesInfos = {}
-    for line in output:
-        if line[11] == vmid:        
-            devicesInfos['room'] = line[0]
-            devicesInfos['hostname'] = line[1]
-            devicesInfos['group'] = line[2]
-            devicesInfos['mac'] = line[3]
-            devicesInfos['ip'] = line[4]
-            devicesInfos['pxe'] = line[10]
-    return devicesInfos
-
-
-def getGroupInfosMaster(devicePath, masterHostname):
-    # sftp = ssh.open_sftp()
-    output = getFileContent(devicePath)
-    # output = sftp.open(devicePath)
-    vdiGroupInfos = {}
-    for line in output:
-        if masterHostname in line:
-            vdiGroupInfos['room'] = line[0]
-            vdiGroupInfos['hostname'] = line[1]
-            vdiGroupInfos['group'] = line[2]
-            vdiGroupInfos['mac'] = line[3]
-            vdiGroupInfos['ip'] = line[4]
-            vdiGroupInfos['pxe'] = line[10]
-    return vdiGroupInfos
-
-
 def getActualImagesize(devicePath, vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
     startConf_data = vdi_common.start_conf_loader(devicePath)

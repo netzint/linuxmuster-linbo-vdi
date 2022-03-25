@@ -131,7 +131,8 @@ def handle_master(vdiGroups):
 def handle_clones(vdiGroups):
     for group in vdiGroups:
                 masterStates = mainMaster(group)
-                if (( int(masterStates['summary']['existing_master']) - int(masterStates['summary']['building_master']) ) >= 1):
+                finishedMasters =(( int(masterStates['summary']['existing_master']) - int(masterStates['summary']['building_master']) ))
+                if finishedMasters >= 1:
                     groupData = getMasterDetails(group)
                     cloneStates = mainClones(group)
 
@@ -139,6 +140,7 @@ def handle_clones(vdiGroups):
                     logger.info(json.dumps(cloneStates['summary'],indent=62))
 
                     # if under minimum  ||  if available < prestarted  &&  existing < maximum
+                    # create clone
                     if ( (cloneStates['summary']['existing_vms']) < groupData['minimum_vms']) \
                             or ( cloneStates['summary']['available_vms'] < groupData['prestarted_vms']
                             and ( cloneStates['summary']['existing_vms'] < groupData['maxmimum_vms']) ):
@@ -146,6 +148,7 @@ def handle_clones(vdiGroups):
                         t = threading.Thread(target=buildClone.main, args=(group,))
                         t.start()
                     # if (available > prestarted) || existing > minimum)
+                    # delete clones
                     elif (cloneStates['summary']['available_vms'] > groupData['prestarted_vms']
                             and cloneStates['summary']['existing_vms'] > groupData['minimum_vms']):
                         logger.info("***** Try removing Clone ... *****")

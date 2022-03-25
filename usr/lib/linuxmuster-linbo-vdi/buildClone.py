@@ -16,7 +16,7 @@ import os
 import logging
 import vdi_common
 from proxmoxer import ProxmoxAPI
-from globalValues import node,getSchoolId,multischool,nmapPorts,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
+from globalValues import node,getSchoolId,multischool,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -148,28 +148,37 @@ def getDeviceConf(devicePath,masterGroup):
 
 
 # checks if windows bootet succesfully and waits multischool time
-def checkNmap(timeout, cloneVmid, cloneIp, ports):
+def checkNmap(timeout, cloneVmid, cloneIp):
+    windows_ports = {"RPC": "135", "SMB": "445", "SVCHOST": "49665"}
+    linux_ports = {"SSH": "22"}
     terminate = time.time() + timeout
     scanner = nmap.PortScanner()
     logger.info("*** Scanning for open ports on " + cloneVmid + " ***")
+
     while time.time() < terminate:
-        for port in ports:
-            #print(port)
-            status = scanner.scan(cloneIp, str(port))
+        for port in windows_ports:
             try:
-                status = status['scan'][cloneIp]['tcp'][int(port)]['state']
-                logger.info("*** - Port " + str(port) + " :" + status + " ***")
-                #print(status)
+                portscan = scanner.scan(cloneIp, windows_ports[port])
+                status = portscan['scan'][cloneIp]['tcp'][int(windows_ports[port])]['state']
+                logger.debug("Port " + port + " : " + status)
                 if status == "open":
-                    logger.info("*** Found open port! ***")
+                        logger.info("*** Windows boot check on " + str(cloneVmid) + " succesfully, found open port ***")
+                        return True
+            except KeyError as err:
+                continue
+        for port in linux_ports:
+            try:   
+                portscan = scanner.scan(cloneIp, linux_ports[port])
+                status = portscan['scan'][cloneIp]['tcp'][int(linux_ports[port])]['state']
+                logger.debug("Port " + port + " : " + status)
+                if status == "open":
+                    logger.info("*** Linux boot check on " + str(cloneVmid) + " succesfully, found open port ***")
                     return True
-            except Exception as err:
-                if err == str(cloneIp):
-                    return True
-                else:
-                    print(" NMAP Error: ")
-                    print(err)
-                    logger.info("*** Waiting for ping to " + cloneIp + " ***")
+            except KeyError as err:
+                continue
+        logger.info("*** Clone " + str(cloneVmid) + " seems not ready yet, no open ports found ***")
+        time.sleep(5)
+
     return False
 
 
@@ -246,7 +255,7 @@ def main(vdiGroup):
     cloneIp = cloneConf[cloneVmid]['ip']
     timeoutBuilding = vdiGroupInfos['timeout_building_clone']
 # if checkNmap succesful => change buildingstate finished
-    if checkNmap(timeoutBuilding, cloneVmid, cloneIp, ports=nmapPorts) == True:
+    if checkNmap(timeoutBuilding, cloneVmid, cloneIp) == True:
         cloneDescription['buildstate'] = "finished"
         description = json.dumps(cloneDescription)
         proxmox.nodes(cloneNode).qemu(cloneVmid).config.post(description=description)

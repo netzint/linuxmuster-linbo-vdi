@@ -215,7 +215,6 @@ def getSmbstatus(schoolId = "default-school"):
                         with paramiko.SSHClient() as sshSmbstatus:
                             sshSmbstatus.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                             sshSmbstatus.connect(fileserver, port=22, username='root')
-                            #ssh.connect(serverIp, port=22, username='root', pkey = ssh_key)
                             sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(commandSmbstatus)      
 
                         

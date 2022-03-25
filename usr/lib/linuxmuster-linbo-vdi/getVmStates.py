@@ -54,20 +54,6 @@ def getApiInfos(node, cloneVmid):
 
 
 
-
-
-######## if logedinuser has ip of vm, than user is set to vmid from vm ########
-def addUser(vmid, logedIn):
-
-    for user in logedIn:
-        if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-            logger.info(user)
-            allallInfos[vmid]["user"] = user
-            logger.info(allallInfos[vmid]["user"])
-        else:
-            allallInfos[vmid]["user"] = ""
-
-
 ######## merges all vm infos to one JSON and returns it with vmid ########
 def mergeInfos(vmid, apiInfos, groupInfos):
     jsonObject = {}
@@ -387,16 +373,6 @@ def getApiInfosMaster(node,vmid):
         pass
 
 
-
-######## if logedinuser has ip of vm, than user is set to vmid from vm ########
-def addUser(vmid, logedIn):
-    for user in logedIn:
-        if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-            logger.info(user)
-            allallInfos[vmid]["user"] = user
-            logger.info(allallInfos[vmid]["user"])
-        else:
-            allallInfos[vmid]["user"] = ""
 
 
 ######## merges all vm infos to one JSON and returns it with vmid ########

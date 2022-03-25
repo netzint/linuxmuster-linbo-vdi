@@ -125,6 +125,29 @@ def main(vdiGroup):
 
     # search for failed VMs! =>
     for vmid in removevableStates:
+            if removevableStates[vmid]['buildstate'] == "finished" and removevableStates[vmid]['status'] == "stopped":
+                try:
+                    status = removevableStates[vmid]['status']
+                    if status == "running":
+                        proxmox.nodes(node).qemu(vmid).status.stop.post()
+                        logger.info("*** Clone " + str(vmid) + " is getting stopped.***")
+                        if waitForStatusStoppped(proxmox, 20, node, vmid) == True:
+                            try:
+                                proxmox.nodes(node).qemu(vmid).delete()
+                                print("*** Deleting stopped VM: " + str(vmid) + " ***")
+                                return
+                                #sys.exit()
+                            except Exception as err:
+                                logger.info("Deleting error:")
+                                logger.info(err)
+                    else:
+                        proxmox.nodes(node).qemu(vmid).delete()
+                        print("*** Deleting failed VM: " + str(vmid) + " ***")
+                        return
+                        #sys.exit()
+                except Exception as err:
+                    logger.info(err)
+
             if removevableStates[vmid]['buildstate'] == "failed":
                 try:
                     status = removevableStates[vmid]['status']

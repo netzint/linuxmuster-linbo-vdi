@@ -70,7 +70,7 @@ def handle_master(vdiGroups):
         # get masterStates
         global masterStates
         masterStates = mainMaster(group)
-        logger.info("***** Master States Summary: *****")
+        logger.info("***** Master States Summary for group " + group + ": *****")
         logger.debug(json.dumps(masterStates['summary'], indent=2))
 
         # if no Master available
@@ -145,7 +145,7 @@ def handle_clones(vdiGroups):
                     groupData = getMasterDetails(group)
                     cloneStates = mainClones(group)
 
-                    logger.info("***** Clone States Summary: *****")
+                    logger.info("***** Clone States Summary for Group " + group + ": *****")
                     logger.info(json.dumps(cloneStates['summary'],indent=2))
 
                     # if under minimum  ||  if available < prestarted  &&  existing < maximum

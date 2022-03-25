@@ -159,11 +159,11 @@ def masterThreading(vdiGroups):
     
     for vdiGroup in vdiGroups:
         groupDetails=getMasterDetails(vdiGroup)
-        if groupDetails['activated'] == "yes":
+        if groupDetails['activated'] == True:
             logger.info("***** VDI Group " + str(vdiGroup) + " is activated! *****")
             t = threading.Thread(target=handle_master,args=(vdiGroup,))
             master_threads.append(t)
-        if groupDetails['activated'] == "no":
+        if groupDetails['activated'] == False:
             logger.info("***** VDI Group " + str(vdiGroup) + " is not activated! *****")
             continue
     for thread in master_threads:
@@ -177,11 +177,11 @@ def clonesThreading(vdiGroups):
         clones_threads = []
         for vdiGroup in vdiGroups:
             groupDetails=getMasterDetails(vdiGroup)
-            if groupDetails['activated'] == "yes":
+            if groupDetails['activated'] == True:
                 logger.info("***** VDI Group " + str(vdiGroup) + " is activated! *****")
                 t = threading.Thread(target=handle_clones,args=(vdiGroup,))
                 clones_threads.append(t)
-            if groupDetails['activated'] == "no":
+            if groupDetails['activated'] == False:
                 logger.info("***** VDI Group " + str(vdiGroup) + " is not activated! *****")
                 continue
         for thread in clones_threads:

@@ -142,7 +142,7 @@ def main(vdiGroup):
                                 logger.info(err)
                     else:
                         proxmox.nodes(node).qemu(vmid).delete()
-                        print("*** Deleting failed VM: " + str(vmid) + " ***")
+                        print("*** Deleting stopped VM: " + str(vmid) + " ***")
                         return
                         #sys.exit()
                 except Exception as err:
@@ -290,4 +290,7 @@ def main(vdiGroup):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] [l%(lineno)4s]- %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.INFO)
     main(sys.argv[1])

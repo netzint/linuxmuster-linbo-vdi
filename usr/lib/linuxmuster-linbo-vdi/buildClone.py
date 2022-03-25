@@ -161,7 +161,7 @@ def checkNmap(timeout, cloneVmid, cloneIp):
                 portscan = scanner.scan(cloneIp, windows_ports[port])
                 status = portscan['scan'][cloneIp]['tcp'][int(windows_ports[port])]['state']
                 logger.debug("Port " + port + " : " + status)
-                if status == "open":
+                if status == "open" or status == "closed":
                         logger.info("*** Windows boot check on " + str(cloneVmid) + " succesfully, found open port ***")
                         return True
             except KeyError as err:
@@ -171,13 +171,13 @@ def checkNmap(timeout, cloneVmid, cloneIp):
                 portscan = scanner.scan(cloneIp, linux_ports[port])
                 status = portscan['scan'][cloneIp]['tcp'][int(linux_ports[port])]['state']
                 logger.debug("Port " + port + " : " + status)
-                if status == "open":
+                if status == "open" or status == "closed":
                     logger.info("*** Linux boot check on " + str(cloneVmid) + " succesfully, found open port ***")
                     return True
             except KeyError as err:
                 continue
         logger.info("*** Clone " + str(cloneVmid) + " seems not ready yet, no open ports found ***")
-        time.sleep(5)
+        time.sleep(2)
 
     return False
 

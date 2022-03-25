@@ -69,6 +69,7 @@ def getFileContent(path_to_file):
         logging.error(path_to_file + ' not a file')     
 
 
+
 if __name__ == "__main__":
     quit()
 

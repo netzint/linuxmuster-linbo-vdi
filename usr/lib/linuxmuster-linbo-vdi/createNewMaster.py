@@ -210,7 +210,7 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
                     status = portscan['scan'][masterIP]['tcp'][int(windows_ports[port])]['state']
                     logger.debug("Port " + port + " : " + status)
                     if status == "open":
-                        logger.info("*** Windows boot check on " + str(masterVmid) + "succesfully, found open port ***")
+                        logger.info("*** Windows boot check on " + str(masterVmid) + " succesfully, found open port ***")
                         return True
                 except KeyError as err:
                     continue

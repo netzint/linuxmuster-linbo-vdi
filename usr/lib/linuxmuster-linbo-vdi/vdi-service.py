@@ -42,17 +42,7 @@ if level == "DEBUG":
 
 logger = logging.getLogger(__name__)
 
-#formatter = logging.Formatter('%(asctime)s %(levelname)s: %(filename)s - %(message)s')
-#handler = logging.StreamHandler()
-#handler.setFormatter(formatter)
-#handler.setLevel(logging.INFO)
-#
-#package_logger = logging.getLogger(__name__.split('.')[0])
-#package_logger.setLevel(logging.INFO)
-#package_logger.setLevel(logging.WARNING)
-#package_logger.addHandler(handler)
-#
-#logger = logging.getLogger(__name__)
+
 
 def handle_master(vdiGroups):
 
@@ -146,7 +136,7 @@ def handle_clones(vdiGroups):
                     cloneStates = mainClones(group)
 
                     logger.info("***** Clone States Summary for Group " + group + ": *****")
-                    logger.info(json.dumps(cloneStates['summary'],indent=2))
+                    logger.info(json.dumps(cloneStates['summary'],indent=62))
 
                     # if under minimum  ||  if available < prestarted  &&  existing < maximum
                     if ( (cloneStates['summary']['existing_vms']) < groupData['minimum_vms']) \

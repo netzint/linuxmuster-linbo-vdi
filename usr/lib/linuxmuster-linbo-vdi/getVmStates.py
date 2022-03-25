@@ -238,7 +238,7 @@ def mainMaster(group="all", quiet=False):
 
     while not checkConnections():
         checkConnections()
-    allGroups = []
+    allGroups = []      
     if group == "all":
         allGroups = getVDIGroups()
         allGroupInfos = {}

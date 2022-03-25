@@ -59,14 +59,14 @@ def image_info_loader(image_name):
              data[key] = value.strip()
     return data
     
-def getFileContent(path_to_file):
-    if os.path.isfile(path_to_file):
-        with open (path_to_file, 'r') as reader:
-            return reader.readlines()
-        #reader = open(path_to_file, 'r')
-        #return reader.read()
-    else:
-        logging.error(path_to_file + ' not a file')     
+#def getFileContent(path_to_file):
+#    if os.path.isfile(path_to_file):
+#        with open (path_to_file, 'r') as reader:
+#            return reader.readlines()
+#        #reader = open(path_to_file, 'r')
+#        #return reader.read()
+#    else:
+#        logging.error(path_to_file + ' not a file')     
 
 
 

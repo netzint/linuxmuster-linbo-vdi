@@ -43,9 +43,6 @@ def find_and_sort_Existing_Masters(masterStates, masterVmids):
     logger.info("Removeable Masters:")
     logger.info(existing_master)
 
-    if len(existing_master) == 0:
-        return False
-
     if len(existing_master) == 1:
         logger.info("*** Just one Master exists ***")
         return existing_master

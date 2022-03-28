@@ -9,7 +9,8 @@
 
 import json
 from datetime import datetime
-from globalValues import node,getSchoolId,proxmox,checkConnections,timeoutConnectionRequest,getMasterDetails,getFileContent,getJsonFile,getCommandOutput,getVDIGroups,getSmbstatus
+from globalValues import node,proxmox,timeoutConnectionRequest
+#from globalValues import getMasterDetails
 import vdi_common
 import argparse
 import logging
@@ -19,38 +20,39 @@ __version__ = 'version 0.90.22'
 logger = logging.getLogger(__name__)
 
 ######## tries to get information from existing VMs (Clones):  ########
-def getApiInfos(node, cloneVmid):
-
-    apiInfos = proxmox.nodes(node).qemu(cloneVmid).config.get()   # => type = dict
-    status = proxmox.nodes(node).qemu(cloneVmid).status.current.get()
-    status = status['qmpstatus']
-    apiInfos["status"] = status
-
-    uptime = proxmox.nodes(node).qemu(cloneVmid).status.current.get()
-    uptime = uptime['uptime']
-    apiInfos["uptime"] = uptime
-
-    apiInfos['spicestatus'] = ""
-    description = apiInfos['description']
-##### split and separate description from descriptionf field from vm ######
-    # descriptionJSON = {}
+def get_vm_info_by_api(node, vm_id,vdi_group)-> dict:
+    """ Returns all information provided by hv API including description dict
+    
+    :param node: str
+    :param vm_id: int
+    :param vdi_group: str
+    :rtype dict
+    """
     try:
-        descriptionJSON = json.loads(description)
-        try:
-            apiInfos['dateOfCreation'] = descriptionJSON["dateOfCreation"]
-            apiInfos['cloop'] = descriptionJSON["cloop"]
-            apiInfos['buildstate'] = descriptionJSON["buildstate"]
-            apiInfos['master'] = descriptionJSON["master"]
-            apiInfos['lastConnectionRequestUser'] = descriptionJSON['lastConnectionRequestUser']
-            apiInfos['lastConnectionRequestTime'] = descriptionJSON['lastConnectionRequestTime']
-            apiInfos.pop("description")
-            return apiInfos
-        except Exception:
-            logging.error("***** Failed to assign description values. *****")  
-    except Exception as err:
-        # print("Failed to load JSON or api access failed:")
-        # print(err)
-        pass
+        vm_api_infos = proxmox.nodes(node).qemu(vm_id).config.get()
+        vm_api_infos["status"] = proxmox.nodes(node).qemu(vm_id).status.current.get()['qmpstatus']
+        vm_api_infos["uptime"] = proxmox.nodes(node).qemu(vm_id).status.current.get()['uptime']
+        vm_api_infos['spicestatus'] = ""
+    except Exception:
+        logging.error(f"[{vdi_group}] failed to parse description JSON for vm {vm_id}")
+        return None
+    ##### split and separate description from descriptionf field from vm ######
+
+    description_json = json.loads(vm_api_infos['description'])
+
+    try:
+        vm_api_infos['dateOfCreation'] = description_json["dateOfCreation"]
+        vm_api_infos['cloop'] = description_json["cloop"]
+        vm_api_infos['buildstate'] = description_json["buildstate"]
+        vm_api_infos['master'] = description_json["master"]
+        vm_api_infos['lastConnectionRequestUser'] = description_json['lastConnectionRequestUser']
+        vm_api_infos['lastConnectionRequestTime'] = description_json['lastConnectionRequestTime']
+        vm_api_infos.pop("description")
+
+        return vm_api_infos
+    except Exception:
+        logging.error(f"[{vdi_group}] Failed to assign vm_api_infos")  
+        return None
 
 
 
@@ -62,283 +64,148 @@ def mergeInfos(vmid, apiInfos, groupInfos):
     return jsonObject 
 
 
-####### get Collection of all VMs who are registered at school server #######
-def getVmidRange(devicePath,vdiGroup):
-    output = getFileContent(devicePath)
-    logging.info("*** Check VM-ID-Range for Group "+ vdiGroup + " ***")
-    vmidRange = []
-    for line in output:
-        if vdiGroup in line[2]:
-            if "master" not in line[1] and line[11] is not "":
-                vmid = line[11]
-                vmidRange.append(vmid)
-    return vmidRange
-
-
 ######## returns dict devicesInfos from devices list  ########
-def getGroupInfos(devicePath, vmid):
-    output = getFileContent(devicePath)
+def getGroupInfos(devices, vmid):
     devicesInfos = {}
-    for line in output:
-        if line[11] == vmid:
-            devicesInfos['room'] = line[0]
-            devicesInfos['hostname'] = line[1]
-            devicesInfos['group'] = line[2]
-            devicesInfos['mac'] = line[3]
-            devicesInfos['ip'] = line[4]
-            devicesInfos['pxe'] = line[10]
+    for device in devices:
+        if device[11] == vmid:
+            devicesInfos['room'] = device[0]
+            devicesInfos['hostname'] = device[1]
+            devicesInfos['group'] = device[2]
+            devicesInfos['mac'] = device[3]
+            devicesInfos['ip'] = device[4]
+            devicesInfos['pxe'] = device[10]
     return devicesInfos
 
 
-def getGroupInfosMaster(devicePath, masterHostname):
-    output = getFileContent(devicePath)
+def getGroupInfosMaster(devices, master_hostname):
     vdiGroupInfos = {}
-    for line in output:
-        if masterHostname in line[1]:
-            vdiGroupInfos['room'] = line[0]
-            vdiGroupInfos['hostname'] = line[1]
-            vdiGroupInfos['group'] = line[2]
-            vdiGroupInfos['mac'] = line[3]
-            vdiGroupInfos['ip'] = line[4]
-            vdiGroupInfos['pxe'] = line[10]
+    for device in devices:
+        if master_hostname in device[1]:
+            vdiGroupInfos['room'] = device[0]
+            vdiGroupInfos['hostname'] = device[1]
+            vdiGroupInfos['group'] = device[2]
+            vdiGroupInfos['mac'] = device[3]
+            vdiGroupInfos['ip'] = device[4]
+            vdiGroupInfos['pxe'] = device[10]
     return vdiGroupInfos
 
 
 
 ####### CLONES: ########
-def mainClones(group = "all", quiet=False):
+def get_clone_states(group_data,vdi_group)-> dict:
 
-    checkConnections()
+    vdi_common.check_connection()
     allGroups = []
-    if group == "all":
-        allGroups = getVDIGroups()
-        allallGroupInfos = {}
-    else:
-        allGroups.append(group)
+    allGroups.append(vdi_group)
 
 
-    allallInfos = {}
-    for vdiGroup in allGroups:
+    clone_states = {}
+    #for group in allGroups:
 
-        vdiGroupInfos = getMasterDetails(vdiGroup)
+    school_id = vdi_common.get_school_id(vdi_group)
 
-        schoolId = getSchoolId(vdiGroup)
-        if schoolId != "" or schoolId != "default-school":
-            devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
-        else:
-            devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
 
-####### Get collected JSON Info File to all VMs from Group #############
-        idRange = getVmidRange(devicePath,vdiGroup)
+    ####### Get collected JSON Info File to all VMs from Group #############
+    devices = vdi_common.devices_loader(school_id)
+    idRange = vdi_common.get_vmid_range(devices, vdi_group)
 
-####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one list #######
-        for vmid in idRange:
-            apiInfos = {}
-            groupInfos = getGroupInfos(devicePath, vmid)
-            try:
-                apiInfos = getApiInfos(node,vmid)
-            except Exception as err:
-                #print(err)
-                pass
-            allInfos = mergeInfos(vmid, apiInfos, groupInfos)
-            allallInfos.update(allInfos)
 
-####### adds user field if vm is used by an user #######
-        logedIn = getSmbstatus(schoolId)
-        if logedIn:
-            for user in logedIn:
-                for vmid in idRange:
-                    if "buildstate" in allallInfos[vmid]:
-                        if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-                            allallInfos[vmid]["user"] = logedIn[user]["full"]
-                        #elif "user" in allallInfos[vmid]:
-                        #else:# check if user already assign user with another IP!
-                        #    if allallInfos[vmid]["user"] == "":
-                        #        allallInfos[vmid]["user"] = ""
-                        elif "user" not in allallInfos[vmid]:
-                            allallInfos[vmid]["user"] = ""
-                    else:
-                        allallInfos[vmid]["user"] = ""
-        else:
+    ####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one dict #######
+    #TODO this seems to take a while, improve!
+    for vmid in idRange:    
+        apiInfos = get_vm_info_by_api(node,vmid,vdi_group)
+        if apiInfos:
+            vm_infos = mergeInfos(vmid, apiInfos, group_data)
+            clone_states.update(vm_infos)
+
+    ####### adds user field if vm is used by an user #######
+    loggedIn = vdi_common.getSmbstatus(school_id)
+    if loggedIn:
+        for user in loggedIn:
             for vmid in idRange:
-                allallInfos[vmid]["user"] = ""
+                if "buildstate" in clone_states[vmid]:
+                    if loggedIn[user]["ip"] == clone_states[vmid]["ip"]:
+                        clone_states[vmid]["user"] = loggedIn[user]["full"]
+                    #elif "user" in allallInfos[vmid]:
+                    #else:# check if user already assign user with another IP!
+                    #    if allallInfos[vmid]["user"] == "":
+                    #        allallInfos[vmid]["user"] = ""
+                    elif "user" not in clone_states[vmid]:
+                        clone_states[vmid]["user"] = ""
+                else:
+                    clone_states[vmid]["user"] = ""
+    else:
+        for vmid in idRange:
+            clone_states[vmid]["user"] = ""
 
 
-####### calculates summary values 'allocated_vms', 'existing_vms', 'building_vms' #######
-        allocated = 0
-        existing = 0
-        available = 0
-        building = 0
-        failed = 0
-        registered = len(idRange)
-
-        now = datetime.now()
-        now = float(now.strftime("%Y%m%d%H%M%S"))
-
-        for vmid in allallInfos:
-            # calculate existing
+    ####### calculates summary values 'allocated_vms', 'existing_vms', 'building_vms' #######
+    allocated = 0
+    existing = 0
+    available = 0
+    building = 0
+    failed = 0
+    registered = len(idRange)
+    now = datetime.now()
+    now = float(now.strftime("%Y%m%d%H%M%S"))
+    for vmid in clone_states:
+        # calculate existing
+        try:
+            proxmox.nodes(node).qemu(vmid).status.get()
+            existing = existing + 1
+            # calculate building,finished,available,allocated,failed - just from existing vms!
             try:
-                proxmox.nodes(node).qemu(vmid).status.get()
-                existing = existing + 1
-                # calculate building,finished,available,allocated,failed - just from existing vms!
-                try:
-                    if allallInfos[vmid]['buildstate'] == "building":
-                        building = building + 1
-                    elif allallInfos[vmid]['buildstate'] == "finished":
-                        if (allallInfos[vmid]['lastConnectionRequestTime'] == ""):
-                            if allallInfos[vmid]['user'] == "":
-                                available = available + 1
-                            elif allallInfos[vmid]["user"] != "":
-                                allocated = allocated + 1
-                        elif (allallInfos[vmid]['lastConnectionRequestTime'] != ""):
-                            if allallInfos[vmid]['user'] == "" \
-                                    and (now - float(allallInfos[vmid]['lastConnectionRequestTime']) > timeoutConnectionRequest):
-                                        available = available + 1
-                            elif allallInfos[vmid]["user"] != "" \
-                                    or (now - float(allallInfos[vmid]['lastConnectionRequestTime']) <= timeoutConnectionRequest):
-                                        allocated = allocated + 1
-                    elif allallInfos[vmid]['buildstate'] == "failed":
-                        failed = failed + 1
-                except Exception as err:
-                    #logger.info(err)
-                    pass
+                if clone_states[vmid]['buildstate'] == "building":
+                    building = building + 1
+                elif clone_states[vmid]['buildstate'] == "finished":
+                    if (clone_states[vmid]['lastConnectionRequestTime'] == ""):
+                        if clone_states[vmid]['user'] == "":
+                            available = available + 1
+                        elif clone_states[vmid]["user"] != "":
+                            allocated = allocated + 1
+                    elif (clone_states[vmid]['lastConnectionRequestTime'] != ""):
+                        if clone_states[vmid]['user'] == "" \
+                                and (now - float(clone_states[vmid]['lastConnectionRequestTime']) > timeoutConnectionRequest):
+                                    available = available + 1
+                        elif clone_states[vmid]["user"] != "" \
+                                or (now - float(clone_states[vmid]['lastConnectionRequestTime']) <= timeoutConnectionRequest):
+                                    allocated = allocated + 1
+                elif clone_states[vmid]['buildstate'] == "failed":
+                    failed = failed + 1
             except Exception as err:
-                #print(err)
-                continue
+                #logger.info(err)
+                pass
+        except Exception as err:
+            #print(err)
+            continue
 
-        summary = {}
-        summary["allocated_vms"] = allocated
-        summary["available_vms"] = available
-        summary["existing_vms"] = existing
-        summary["registered_vms"] = registered
-        summary["building_vms"] = building
-        summary["failed_vms"] = failed
 
-        if group == "all":
-            allallGroupInfos[vdiGroup] = {}
-            allallGroupInfos[vdiGroup]['clone_vms'] = allallInfos
-            allallGroupInfos[vdiGroup]['summary']  = summary
-        else:
-            allallInfos['summary'] = summary
+        vm_infos['summary'] = {
+            'allocated_vms'     : allocated,
+            'available_vms'   : available,
+            'existing_vms'     : existing,
+            'registered_vms': registered,
+            'building_vms': building,
+            'failed_vms'     : failed,
+        }
+        # TODO Port back all in CLI
+        #if group == "all":
+        #    allallGroupInfos[vdiGroup] = {}
+        #    allallGroupInfos[vdiGroup]['clone_vms'] = allallInfos
+        #    allallGroupInfos[vdiGroup]['summary']  = summary
+        #else:
+        #    allallInfos['summary'] = summary
     
 ####### prints the whole JSON with all information #######
 
-    if group == "all":
-        if not quiet:
-            logger.info(json.dumps(allallGroupInfos, indent=2))
-        return allallGroupInfos
-    else:
-        if not quiet:
-            logger.info(json.dumps(allallInfos, indent=2))
-        return allallInfos
+        #logger.info(json.dumps(allallInfos, indent=2))
+        return clone_states
     
-
-####### MASTER: #######
-def mainMaster(group="all", quiet=False):
-
-    while not checkConnections():
-        checkConnections()
-    allGroups = []      
-    if group == "all":
-        allGroups = getVDIGroups()
-        allGroupInfos = {}
-        #print("=======AllGroups:")
-        #print(allGroups)
-    else:
-        allGroups.append(group)
-
-    groupInfos = {}
-    for vdiGroup in allGroups:
-
-        vdiGroupInfos = getMasterDetails(vdiGroup)
-        schoolId = getSchoolId(vdiGroup)
-        devicePath = str
-        if schoolId != "" or schoolId != "default-school":
-            devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
-        else:
-            devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
-
-
-        ####### Get collected JSON Info File to all VMs from Group #############
-        logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
-        masterVmids = vdiGroupInfos['vmids'].split(',')
-        masterName = vdiGroupInfos['hostname']
-
-        if group == "all":
-            # general
-            groupInfos = getGroupInfosMaster(devicePath, masterName)
-            groupInfos['actual_imagesize'] = getActualImagesize(devicePath, vdiGroup)
-            groupInfos['hostname'] = masterName
-        else:
-            groupInfos['basic'] = getGroupInfosMaster(devicePath, masterName)
-            groupInfos['basic']['actual_imagesize'] = getActualImagesize(devicePath, vdiGroup)
-            groupInfos['basic']['hostname'] = masterName
-
-        allApiInfos = {}
-        logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
-        ####### get api Infos #######
-        for vmid in masterVmids:
-            #print(type(vmid)) # => 'str'
-            apiInfos = {}
-            try:
-                apiInfos[vmid] = getApiInfosMaster(node,vmid)
-            except Exception:
-                apiInfos[vmid] = None
-                pass
-            allApiInfos.update(apiInfos)
-
-        if group == "all":
-            groupInfos['master_vms'] = allApiInfos
-        else:
-            groupInfos.update(allApiInfos)
-
-        # summary
-        existing = 0
-        finished = 0
-        failed = 0
-        building = 0
-        registered = len(masterVmids)
-
-        for vmid in allApiInfos:
-            # calculate existing
-            try:
-                proxmox.nodes(node).qemu(vmid).status.get()
-                existing = existing + 1
-                # calculate buildstates - just from existing vms!
-                try:
-                    if allApiInfos[vmid]['buildstate'] == "building":
-                        building = building + 1
-                    elif allApiInfos[vmid]['buildstate'] == "finished":
-                        finished = finished + 1
-                    elif allApiInfos[vmid]['buildstate'] == "failed":
-                        failed = failed + 1
-                except Exception:
-                    pass
-            except Exception:
-                pass
-
-        groupInfos["summary"] = {}
-        groupInfos["summary"]["existing_master"] = existing
-        groupInfos["summary"]["registered_master"] = registered
-        groupInfos["summary"]["building_master"] = building
-        groupInfos["summary"]["failed_master"] = failed
-        #allallInfos.update(groupInfos)
-
-        if group == "all":
-            allGroupInfos[vdiGroup] = groupInfos
-
-    if group == "all":
-        if not quiet:
-            logger.info(json.dumps(allGroupInfos, indent=2))
-        return allGroupInfos
-    else:
-        if not quiet:
-            logger.info(json.dumps(groupInfos, indent=2))
-        return groupInfos
 
 
 ###### get api infos to master ######
-def getApiInfosMaster(node,vmid):
+def getApiInfosMaster(node,vmid)-> dict:
 
     apiInfos = proxmox.nodes(node).qemu(vmid).config.get()     # => type = dict
     description = apiInfos['description']
@@ -373,7 +240,7 @@ def getApiInfosMaster(node,vmid):
         pass
 
 
-def getActualImagesize(devicePath, vdiGroup):
+def getActualImagesize(vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
     startConf_data = vdi_common.start_conf_loader(devicePath)
     
@@ -386,234 +253,91 @@ def getActualImagesize(devicePath, vdiGroup):
 
 
 
-####### CLONES: ########
-def mainClones(group = "all", quiet=False):
-
-    while not checkConnections():
-        checkConnections()
-    allGroups = []
-    if group == "all":
-        allGroups = getVDIGroups()
-        allallGroupInfos = {}
-    else:
-        allGroups.append(group)
-
-
-    allallInfos = {}
-    for vdiGroup in allGroups:
-
-        vdiGroupInfos = getMasterDetails(vdiGroup)
-
-        schoolId = getSchoolId(vdiGroup)
-        devicePath = str
-        if schoolId != "" or schoolId != "default-school":
-            devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
-        else:
-            devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
-
-####### Get collected JSON Info File to all VMs from Group #############
-        #logger.info("***** ID Range for imagegroup: " + vdiGroup + " *****")
-        idRange = getVmidRange(devicePath,vdiGroup)
-
-####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one list #######
-        for vmid in idRange:
-            apiInfos = {}
-            groupInfos = getGroupInfos(devicePath, vmid)
-            try:
-                apiInfos = getApiInfos(node,vmid)
-            except Exception as err:
-                #print(err)
-                pass
-            allInfos = mergeInfos(vmid, apiInfos, groupInfos)
-            allallInfos.update(allInfos)
-
-####### adds user field if vm is used by an user #######
-        # grep nach users !
-        logedIn = getSmbstatus(schoolId)
-        
-        #print(logedIn)
-        if logedIn:
-            for user in logedIn:
-                for vmid in idRange:
-                    if "buildstate" in allallInfos[vmid]:
-                        if logedIn[user]["ip"] == allallInfos[vmid]["ip"]:
-                            allallInfos[vmid]["user"] = logedIn[user]["full"]
-                        else:
-                            allallInfos[vmid]["user"] = ""
-                    else:
-                        allallInfos[vmid]["user"] = ""
-        else:
-            for vmid in idRange:
-                allallInfos[vmid]["user"] = ""
-
-
-####### calculates summary values 'allocated_vms', 'existing_vms', 'building_vms' #######
-        allocated = 0
-        existing = 0
-        available = 0
-        building = 0
-        failed = 0
-        registered = len(idRange)
-
-        now = datetime.now()
-        now = float(now.strftime("%Y%m%d%H%M%S"))
-
-        for vmid in allallInfos:
-            # calculate existing
-            try:
-                proxmox.nodes(node).qemu(vmid).status.get()
-                existing = existing + 1
-                # calculate building,finished,available,allocated,failed - just from existing vms!
-                try:
-                    if allallInfos[vmid]['buildstate'] == "building":
-                        building = building + 1
-                    elif allallInfos[vmid]['buildstate'] == "finished":
-                        if (allallInfos[vmid]['lastConnectionRequestTime'] == ""):
-                            if allallInfos[vmid]['user'] == "":
-                                available = available + 1
-                            elif allallInfos[vmid]["user"] != "":
-                                allocated = allocated + 1
-                        elif (allallInfos[vmid]['lastConnectionRequestTime'] != ""):
-                            if allallInfos[vmid]['user'] == "" \
-                                    and (now - float(allallInfos[vmid]['lastConnectionRequestTime']) > timeoutConnectionRequest):
-                                        available = available + 1
-                            elif allallInfos[vmid]["user"] != "" \
-                                    or (now - float(allallInfos[vmid]['lastConnectionRequestTime']) <= timeoutConnectionRequest):
-                                        allocated = allocated + 1
-                    elif allallInfos[vmid]['buildstate'] == "failed":
-                        failed = failed + 1
-                except Exception as err:
-                    #logger.info(err)
-                    pass
-            except Exception as err:
-                #print(err)
-                continue
-
-        summary = {}
-        summary["allocated_vms"] = allocated
-        summary["available_vms"] = available
-        summary["existing_vms"] = existing
-        summary["registered_vms"] = registered
-        summary["building_vms"] = building
-        summary["failed_vms"] = failed
-
-        if group == "all":
-            allallGroupInfos[vdiGroup] = {}
-            allallGroupInfos[vdiGroup]['clone_vms'] = allallInfos
-            allallGroupInfos[vdiGroup]['summary']  = summary
-        else:
-            allallInfos['summary'] = summary
-    
-####### prints the whole JSON with all information #######
-
-    if group == "all":
-        # TODO check if this is needed
-        #if not quiet:
-        logger.debug(json.dumps(allallGroupInfos, indent=2))
-        return allallGroupInfos
-    else:
-        #if not quiet:
-        logger.debug(json.dumps(allallInfos, indent=2))
-        return allallInfos
-    
 
 ####### MASTER: #######
-def mainMaster(group="all", quiet=False):
+def get_master_states(group_data,vdiGroup) -> dict:
 
-    checkConnections()
-    allGroups = []
-    if group == "all":
-        allGroups = getVDIGroups()
-        allGroupInfos = {}
-        #print("=======AllGroups:")
-        #print(allGroups)
-    else:
-        allGroups.append(group)
+    vdi_common.check_connection()
+    #allGroups = []
+    #if group == "all":
+    #    allGroups = vdi_common.get_vdi_groups() # TODO Work with dict
+    #    allGroupInfos = {}
+    #    #print("=======AllGroups:")
+    #    #print(allGroups)
+    #else:
+    #allGroups.append(group)
 
     groupInfos = {}
-    for vdiGroup in allGroups:
+    #for vdiGroup in allGroups:
 
-        vdiGroupInfos = getMasterDetails(vdiGroup)
-        schoolId = getSchoolId(vdiGroup)
-        devicePath = str
-        if schoolId != "" or schoolId != "default-school":
-            devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
-        else:
-            devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
+    schoolId = vdi_common.get_school_id(vdiGroup)
+    devices=vdi_common.devices_loader(schoolId)
+    ####### Get collected JSON Info File to all VMs from Group #############
+    master_vmids = group_data['vmids']
+    master_hostname = group_data['hostname']
+    logger.info(f"[{vdiGroup}] ID Range for imagegroup")
+    logger.info(f"[{vdiGroup}] {master_vmids}" )
 
-
-        ####### Get collected JSON Info File to all VMs from Group #############
-        logger.info("*** ID Range for imagegroup: " + vdiGroup + " ***")
-        masterVmids = vdiGroupInfos['vmids'].split(',')
-        masterName = vdiGroupInfos['hostname']
-
-        if group == "all":
-            # general
-            groupInfos = getGroupInfosMaster(devicePath, masterName)
-            groupInfos['actual_imagesize'] = getActualImagesize(devicePath, vdiGroup)
-            groupInfos['hostname'] = masterName
-        else:
-            groupInfos['basic'] = getGroupInfosMaster(devicePath, masterName)
-            groupInfos['basic']['actual_imagesize'] = getActualImagesize(devicePath, vdiGroup)
-            groupInfos['basic']['hostname'] = masterName
-
-        allApiInfos = {}
-        #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
-        ####### get api Infos #######
-        for vmid in masterVmids:
-            #print(type(vmid)) # => 'str'
-            apiInfos = {}
+    #if group == "all":
+    #    # general
+    #    groupInfos = getGroupInfosMaster(devices, master_hostname)
+    #    #groupInfos = getGroupInfosMaster(devicePath, masterName)
+    #    groupInfos['actual_imagesize'] = getActualImagesize(vdiGroup)
+    #    groupInfos['hostname'] = master_hostname
+    #else:
+    groupInfos['basic'] = getGroupInfosMaster(devices, master_hostname)
+    groupInfos['basic']['actual_imagesize'] = getActualImagesize(vdiGroup)
+    groupInfos['basic']['hostname'] = master_hostname
+    allApiInfos = {}
+    #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
+    ####### get api Infos #######
+    for vmid in master_vmids:
+        #print(type(vmid)) # => 'str'
+        apiInfos = {}
+        try:
+            apiInfos[vmid] = getApiInfosMaster(node,vmid)
+        except Exception:
+            apiInfos[vmid] = None
+            pass
+        allApiInfos.update(apiInfos)
+    #if group == "all":
+    #    groupInfos['master_vms'] = allApiInfos
+    #else:
+    groupInfos.update(allApiInfos)
+    # summary
+    groupInfos['summary'] = {
+        'existing_master'     : 0,
+        'registered'   : len(master_vmids),
+        'building_master'     : 0,
+        'failed_master': 0,
+        'finished'     : 0,
+    }
+    
+    for vmid in allApiInfos:
+        # calculate existing
+        try:
+            proxmox.nodes(node).qemu(vmid).status.get()
+            groupInfos["summary"]["existing_master"]  = groupInfos["summary"]["existing_master"]  + 1
+            # calculate buildstates - just from existing vms!
             try:
-                apiInfos[vmid] = getApiInfosMaster(node,vmid)
-            except Exception:
-                apiInfos[vmid] = None
-                pass
-            allApiInfos.update(apiInfos)
-
-        if group == "all":
-            groupInfos['master_vms'] = allApiInfos
-        else:
-            groupInfos.update(allApiInfos)
-
-        # summary
-        existing = 0
-        finished = 0
-        failed = 0
-        building = 0
-        registered = len(masterVmids)
-
-        for vmid in allApiInfos:
-            # calculate existing
-            try:
-                proxmox.nodes(node).qemu(vmid).status.get()
-                existing = existing + 1
-                # calculate buildstates - just from existing vms!
-                try:
-                    if allApiInfos[vmid]['buildstate'] == "building":
-                        building = building + 1
-                    elif allApiInfos[vmid]['buildstate'] == "finished":
-                        finished = finished + 1
-                    elif allApiInfos[vmid]['buildstate'] == "failed":
-                        failed = failed + 1
-                except Exception:
-                    pass
+                if allApiInfos[vmid]['buildstate'] == "building":
+                    groupInfos["summary"]["building_master"] = groupInfos["summary"]["building_master"] + 1
+                if allApiInfos[vmid]['buildstate'] == "finished":
+                    groupInfos["summary"]["finished"] = groupInfos["summary"]["finished"] + 1
+                if allApiInfos[vmid]['buildstate'] == "failed":
+                    groupInfos["summary"]["failed_master"] = groupInfos["summary"]["failed_master"] + 1
             except Exception:
                 pass
+        except Exception:
+            pass
 
-        groupInfos["summary"] = {}
-        groupInfos["summary"]["existing_master"] = existing
-        groupInfos["summary"]["registered_master"] = registered
-        groupInfos["summary"]["building_master"] = building
-        groupInfos["summary"]["failed_master"] = failed
-        #allallInfos.update(groupInfos)
+        #if group == "all":
+        #    allGroupInfos[vdiGroup] = groupInfos
 
-        if group == "all":
-            allGroupInfos[vdiGroup] = groupInfos
-
-    if group == "all":
-        return allGroupInfos
-    else:
-        return groupInfos
+    #if group == "all":
+    #    return allGroupInfos
+    #else:
+    return groupInfos
 
 
 if __name__ == "__main__":
@@ -632,40 +356,12 @@ if __name__ == "__main__":
         print (__version__)
         quit()
     if args.master is not False:
-        print(json.dumps(mainMaster(args.group), indent=2))
+        # TODO Fix this for CLI
+        print(json.dumps(get_master_states(args.group), indent=2))
         quit()
     if args.clones is not False:
-        print(json.dumps(mainClones(args.group), indent=2))
+        print(json.dumps(get_clone_states(args.group), indent=2))
         quit()
     else:
         parser.print_help()
     quit()
-    
-    #for x in range(len(sys.argv)):
-    #    if sys.argv[x] == "-quiet":
-    #        quiet = True
-#
-    #if sys.argv[1] == "-master":
-    #    if quiet == True:
-    #        mainMaster(quiet=True)
-    #    else:
-    #        mainMaster()
-    #elif sys.argv[1] == "-clones":
-    #    if quiet == True:
-    #        mainClones(quiet=True)
-    #    else:
-    #        mainClones()
-    #else:
-    #    group = sys.argv[1]
-    #    if sys.argv[2] == "-master":
-    #        if quiet == True:
-    #            mainMaster(group, quiet=True)
-    #        else:
-    #            mainMaster(group)
-    #    elif sys.argv[2] == "-clones":
-    #        if quiet == True:
-    #            mainClones(group, quiet=True)
-    #        else:
-    #            mainClones(group)
-    #    else:
-    #        print("***** wrong parameter! *****")

@@ -16,7 +16,8 @@ import os
 import logging
 import vdi_common
 from proxmoxer import ProxmoxAPI
-from globalValues import node,getSchoolId,multischool,vdiLocalService,proxmox,getMasterDetails,getCommandOutput,getFileContent
+from globalValues import vdiLocalService,proxmox,node
+#from globalValues import ,multischool,,getMasterDetails
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -51,23 +52,12 @@ def findLatestMaster(masterNode, masterVmids):
     return vmidLatest
 
 
-# calculates range of vmids and returns them
-def getVmidRange(devicePath,masterGroup):
-    output = getFileContent(devicePath)
-    vmidRange = []
-    for line in output:
-        if masterGroup in line[2]:
-            if "master" not in line[1]:
-                vmid = line[11]
-                vmidRange.append(vmid)
-    return vmidRange
 
 
 # searches next available VMID fpr Clone and exits if doesnt exists
 def findNextAvailableVmid(devicePath,masterGroup):
-    idRange = getVmidRange(devicePath,masterGroup)
+    idRange = vdi_common.get_vmid_range(devicePath,masterGroup)
     logger.info(idRange)
-    
     for id in idRange:
     
         if id != '':
@@ -133,7 +123,7 @@ def startClone(cloneNode, cloneVmid):
 def getDeviceConf(devicePath,masterGroup):
     #command = "cat /etc/linuxmuster/sophomorix/default-school/devices.csv"
     command  = "cat " + str(devicePath)
-    devicesCsv = getCommandOutput(command)
+    devicesCsv = run_command(command)
     desctops = {}
     for line in devicesCsv:
         line = str(line)
@@ -208,7 +198,7 @@ def main(vdiGroup):
     #masterPool = pool
 
 # get school environment and calculate devices path     
-    schoolId = getSchoolId(vdiGroup)
+    schoolId = vdi_common.get_school_id(vdiGroup)
     devicePath = str
     if schoolId != "" or schoolId != "default-school":
         devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"

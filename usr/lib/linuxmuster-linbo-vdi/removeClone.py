@@ -13,9 +13,10 @@ import operator
 import time
 import random
 import logging
-from getVmStates import mainClones
+from getVmStates import get_clone_states
 from datetime import datetime
-from globalValues import node,proxmox,getMasterDetails,timeoutConnectionRequest
+from globalValues import node,proxmox,timeoutConnectionRequest
+#from globalValues getMasterDetails
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +96,12 @@ def waitForStatusStoppped(proxmox, timeout, node, vmid):
     return False
 
 
-def main(vdiGroup):
+def main(group_data,vdiGroup):
 
     logger.info("*** Begin removeClone.py ***")
     # get removeable Clones
         # Alternative: cloneStates = getCloneStates(vdiGroup)  # assigned VMs direkt hier erst garnicht einlesen?
-    cloneStates = mainClones(vdiGroup)
+    cloneStates = get_clone_states(vdiGroup)
     del cloneStates['summary']
     logger.info("-------------Clone states::: -----")
     logger.info(json.dumps(cloneStates, indent=2))

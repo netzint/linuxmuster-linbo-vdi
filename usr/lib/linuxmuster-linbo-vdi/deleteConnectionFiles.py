@@ -7,15 +7,16 @@
 # 20201210
 #
 from datetime import datetime
-from globalValues import getCommandOutput,setCommand
+
 import logging
+import vdi_common
 
 logger = logging.getLogger(__name__)
 
 
 def deleteDeprecatedFiles():
     command = "ls /tmp/vdi/start-vdi* 2>/dev/null"    # to just get if no error
-    lines = getCommandOutput(command)
+    lines = vdi_common.run_command(command)
 
     timestamp = datetime.now()
     now = float(timestamp.strftime("%Y%m%d%H%M%S"))
@@ -30,7 +31,7 @@ def deleteDeprecatedFiles():
                 if ((now - float(lineSplitted[2])) > 60):
                     command = "rm " + str(line)
                     logger.info(str(line) + " deleting..")
-                    setCommand(command)
+                    run_command(command)
                 else:
                     logger.info(str(line) + " under 1 min")
                 return

@@ -16,7 +16,7 @@ import argparse
 import logging
 
 from multiprocessing.pool import ThreadPool
-__version__ = 'version 0.90.22'
+__version__ = 'version 0.9.9'
 
 logger = logging.getLogger(__name__)
 

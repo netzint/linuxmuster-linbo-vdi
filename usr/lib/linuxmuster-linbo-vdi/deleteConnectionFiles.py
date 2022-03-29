@@ -31,7 +31,7 @@ def deleteDeprecatedFiles():
                 if ((now - float(lineSplitted[2])) > 60):
                     command = "rm " + str(line)
                     logger.info(str(line) + " deleting..")
-                    run_command(command)
+                    vdi_common.run_command(command)
                 else:
                     logger.info(str(line) + " under 1 min")
                 return

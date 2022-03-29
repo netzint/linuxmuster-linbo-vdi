@@ -23,18 +23,19 @@ logger = logging.getLogger(__name__)
 # finds existing master VMs and sorts them by dateOfCreation
 # so the oldest can be deleted first
 # returns if no master found
-def find_and_sort_Existing_Masters(masterStates, masterVmids,vdi_group):
+def find_and_sort_Existing_Masters(master_states, master_vmids,vdi_group):
     existing_master = {}
-    logger.info(f"[{vdi_group}] {masterVmids}")
-    for vmid in masterVmids:
-        if masterStates[vmid] is not None \
-                and masterStates[vmid] != "summary" \
-                and masterStates[vmid] != "basic":
-            try:
-                dateOfCreation = masterStates[vmid]['dateOfCreation']
-                existing_master[vmid] = dateOfCreation
-            except Exception:
-                pass
+    logger.info(f"[{vdi_group}] {master_vmids}")
+    for vmid in master_vmids:
+        if vmid in master_states:
+            if master_states[vmid] is not None \
+                    and master_states[vmid] != "summary" \
+                    and master_states[vmid] != "basic":
+                try:
+                    dateOfCreation = master_states[vmid]['dateOfCreation']
+                    existing_master[vmid] = dateOfCreation
+                except Exception:
+                    pass
     if len(existing_master) == 0:
         logger.info(f"[{vdi_group}] No Master exists!")
         return False

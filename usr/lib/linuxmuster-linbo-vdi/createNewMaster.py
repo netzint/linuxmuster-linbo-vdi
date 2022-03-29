@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # returns dict with image infos
-def generate_master_description(vdi_group)-> dict:
+def generate_master_description(group_data,vdi_group)-> dict:
     image_values = {}
     devicePath = "/srv/linbo/start.conf." + str(vdi_group)
     startConf_data = vdi_common.start_conf_loader(devicePath)
@@ -38,6 +38,7 @@ def generate_master_description(vdi_group)-> dict:
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")  # => "20201102141556"
     image_values["dateOfCreation"] = dateOfCreation
     image_values["buildstate"] = "building"
+    image_values["group"] = group_data['group']
 
     logging.debug(f"[{vdi_group}] {image_values}")
     return image_values
@@ -72,7 +73,7 @@ def send_linbo_remote_command(school_id, master_ip,vdi_group):
         command += f" -i {master_ip} -p partition,format,initcache:rsync,sync:1,start:1"
         logging.info(f"[{vdi_group}] Send linbo remote command to {master_ip}")
         print (command)
-        run_command(command)
+        vdi_common.run_command(command)
     except Exception as err:
         logger.info(f"[{vdi_group}] SSH Problem ({err})")
 
@@ -238,7 +239,7 @@ def create_master(group_data,vdi_group):
 
 
     timeout = group_data['timeout_building_master']
-    master_description = generate_master_description(vdi_group)
+    master_description = generate_master_description(group_data,vdi_group)
 
     master_device_info = get_master_device_info(devices, group_data['mac'])
 
@@ -297,4 +298,5 @@ def create_master(group_data,vdi_group):
 
 
 if __name__ == "__main__":
-    create_master(sys.argv[1])
+    #create_master(sys.argv[1])
+    quit()

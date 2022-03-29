@@ -24,16 +24,13 @@ node = vdiConfig['node']
 #pool = vdiConfig['pool']
 global mutlischool
 multischool = vdiConfig['multischool']
-global hvIp
 hvIp = vdiConfig['hvIp']
-global hvUser
 hvUser = vdiConfig['hvUser']
+password = vdiConfig['password']
 global timeoutConnectionRequest
 timeoutConnectionRequest = vdiConfig['timeoutConnectionRequest']
 global vdiLocalService # True => running service on server VM,# False => remote
 vdiLocalService = vdiConfig['vdiLocalService']
-global debugging
-debugging = vdiConfig['debugging']
 global nmapPorts
 nmapPorts = vdiConfig['nmapPorts'].split(',')
 global ssh
@@ -48,5 +45,4 @@ if vdiLocalService == False:
     ssh.connect(serverIp, port=22, username='root')
 
 global proxmox
-#proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False )
-proxmox = ProxmoxAPI(hvIp, user=hvUser,  backend='ssh_paramiko')
+proxmox = ProxmoxAPI(hvIp, user=hvUser, password=password, verify_ssl=False)

@@ -8,6 +8,8 @@ import json
 import configparser
 import time
 import subprocess
+import paramiko
+
 from globalValues import vdiLocalService, ssh, proxmox, node
 
 
@@ -109,8 +111,6 @@ def get_school_id(vdiGroup):
 
 # get all vdi groups
 def get_vdi_groups() -> dict:
-    command = "ls /srv/linbo/*.vdi"
-    #files = getCommandOutput(command)
     vdi_groups={'general':{'active_groups':[]}, 'groups':{}}
     for vdi_file in glob.glob("/srv/linbo/*.vdi"):
         data = json_loader(vdi_file)
@@ -120,9 +120,11 @@ def get_vdi_groups() -> dict:
             vdi_groups['general']['active_groups'].append(vdi_group)
     return vdi_groups
 
+
+
 ####### get Collection of all VMs who are registered at school server #######
 def get_vmid_range(devices,vdi_group):
-    logging.info(f"[{vdi_group}] Check VM-ID-Range for Group")
+    logging.debug(f"[{vdi_group}] Check VM-ID-Range for Group")
     vmidRange = []
     for device in devices:
         if vdi_group in device[2]:
@@ -179,6 +181,24 @@ def check_connection():
     logging.info("Waiting.")
     time.sleep(5)
     return False
+
+# calculates latest master and returns VMID
+def get_current_master(master_states, master_vmids, vdi_group):
+    timestampLatest = 0
+    vmidLatest = 0
+    logging.debug(f"[{vdi_group}] All master vmids: {master_vmids}")
+    
+    
+    for vmid in master_vmids:
+        if vmid in master_states:
+            timestamp = master_states[vmid]['dateOfCreation']
+            if float(timestamp) >= float(timestampLatest):
+                timestampLatest = timestamp
+                vmidLatest = vmid
+
+    logging.info(f"[{vdi_group}] current master vmid is {vmidLatest}, timestamp: {str(timestampLatest)}")
+    return {'vmid':vmidLatest,'timestamp':timestampLatest}
+
 
 ###### returns dict{} loggedIn{user : { ip : ip, domain : domain}
 def getSmbstatus(schoolId = "default-school"):

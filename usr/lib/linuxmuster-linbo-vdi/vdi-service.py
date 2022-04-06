@@ -142,11 +142,12 @@ def handle_clones(group_data, vdi_group):
         # delete clones
         elif (clone_states['summary']['available_vms'] > group_data['prestarted_vms']
                 and clone_states['summary']['existing_vms'] > group_data['minimum_vms']):
+            vm_amount_to_delete = clone_states['summary']['existing_vms'] - group_data['minimum_vms']
             logger.debug(f"[{vdi_group}] Try to remove clone...")
-            # removeClone.remove_clone(master_states,clone_states,group_data,vdi_group)
-            t = threading.Thread(
-                target=removeClone.remove_clone, args=(clone_states, vdi_group,))
-            t.start()
+            removeClone.remove_clone(vm_amount_to_delete, clone_states, vdi_group,)
+            #t = threading.Thread(
+            #    target=removeClone.remove_clone, args=(clone_states, vdi_group,))
+            #t.start()
 
         # update outdated clones
         outdated_clones = []

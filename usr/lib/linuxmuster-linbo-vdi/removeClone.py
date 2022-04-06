@@ -117,7 +117,7 @@ def remove_outdated_clones(outdated_clones, clone_states, vdi_group):
         return
 
 
-def remove_clone(clone_states, vdi_group):
+def remove_clone(vm_amount_to_delete,clone_states, vdi_group):
 
     logger.debug(f"{vdi_group} Begin removeClone")
     del clone_states['summary']
@@ -128,6 +128,8 @@ def remove_clone(clone_states, vdi_group):
     for vmid in clone_states:
         if vmid not in assignedIDs and 'status' in clone_states[vmid]:
             removeable_vms[vmid] = clone_states[vmid]
+            if len(removeable_vms) >= vm_amount_to_delete:
+                break
 
     #remove_vms(removeable_vms,node,vdi_group)
     threads = []
@@ -143,7 +145,7 @@ def remove_every_clone(vdi_group):
     vdi_groups = vdi_common.get_vdi_groups()
     if vdi_group in vdi_groups:
         clone_states = get_clone_states(vdi_groups['groups'][vdi_group],vdi_group)
-        remove_vms(clone_states,node,vdi_group)
+        remove_vm(clone_states,node,vdi_group)
 
 
 

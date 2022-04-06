@@ -65,8 +65,6 @@ def handle_master(group_data,vdi_group):
         #removeMaster.remove_master(group_data,vdi_group)
         t = threading.Thread(target=removeMaster.remove_master, args=(group_data,vdi_group,))
         t.start()
-        #time.sleep(5)
-        #t.join()
         # read masterDetails again after deleting one
         # so deleted master is not in existing list
         master_states = get_master_states(group_data,vdi_group)
@@ -108,22 +106,7 @@ def handle_master(group_data,vdi_group):
 
             logger.info(f"[{vdi_group}] Master Ressources " + str(vmidLatest) + " are up to date")
 
-        #if group_data['bios'] == master_states[vmidLatest]['bios'] \
-        #    and group_data['boot'] == master_states[vmidLatest]['boot'] \
-        #    and group_data['cores'] == master_states[vmidLatest]['cores'] \
-        #    and group_data['memory'] == master_states[vmidLatest]['memory'] \
-        #    and group_data['ostype'] == master_states[vmidLatest]['ostype'] \
-        #    and group_data['name'] == master_states[vmidLatest]['name'] \
-        #    and group_data['scsihw'] == master_states[vmidLatest]['scsihw'] \
-        #    and group_data['usb0'] == master_states[vmidLatest]['usb0'] \
-        #    and group_data['spice_enhancements'] == master_states[vmidLatest]['spice_enhancements']:
-        #        logger.info(f"[{vdi_group}] Master Ressources " + str(vmidLatest) + " are up to date")
-        #        pass
-        #else:
-        #    logger.info(f"[{vdi_group}] Master Ressources {str(vmidLatest)} are not up to date, try building new master")
-        #    createNewMaster.create_master(group_data,vdi_group)
-        #    #t = threading.Thread(target=createNewMaster.main(), args=[group])
-        #    #t.start()
+
 
 def handle_clones(group_data, vdi_group):
     #for group in vdiGroups:
@@ -163,7 +146,7 @@ def run_service():
     logger.info("***** VDI-Service initiated ... *****")
     
     while True:
-        logger.info("********************************************************")
+        logger.debug("********************************************************")
         while not vdi_common.check_connection():
             vdi_common.check_connection()
         #active_vdi_groups = vdi_common.getActivatedVdiGroups(getVDIGroups())

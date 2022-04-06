@@ -201,7 +201,7 @@ def prepare_template(masterNode, masterVmid, vdi_group):
     if status == "running":
         proxmox.nodes(masterNode).qemu(masterVmid).status.shutdown.post()
     logger.info(f"[{vdi_group}] Preparing VM to Template... ***")
-    if wait_for_status_stopped(proxmox, 50, masterNode, masterVmid) == True:
+    if wait_for_status_stopped(proxmox, 50, masterNode, masterVmid, vdi_group) == True:
         logger.info(f"[{vdi_group}] Converting VM to Template***")
         proxmox.nodes(masterNode).qemu(masterVmid).template.post()
 
@@ -275,24 +275,23 @@ def create_master(group_data,vdi_group):
     }
 
     create_vm(parameters,vdi_group)
-    start_preparing_vm(master_node, master_vmid,vdi_group)  # start to get prepared by LINBO
+    start_preparing_vm(master_node, master_vmid, vdi_group)  # start to get prepared by LINBO
 
     # if checkNmap succesful => change buildingstate finished and convert to template
     if checkNmap(master_node, timeout, master_vmid, master_device_info['ip'],
                  nmapPorts) == True:  # check if windows bootet succesfully
         master_description['buildstate'] = "finished"
         #description = json.dumps(master_description)
-        prepare_template(master_node,
-                        master_vmid)  # convert VM to Template if stopped
+        prepare_template(master_node, master_vmid, vdi_group)  # convert VM to Template if stopped
         proxmox.nodes(master_node).qemu(master_vmid).config.post(
-            description=master_description)
+            description=json.dumps(master_description))
         logger.info(f"[{vdi_group}] Creating new Template for group terminated succesfully.")
     # if checkNmap failed => change buildingstate failed and getting removed
     else:
         master_description['buildstate'] = "failed"
         #description = json.dumps(master_description)
         proxmox.nodes(master_node).qemu(master_vmid).config.post(
-            description=master_description)
+            description=json.dumps(master_description))
         logger.info(f"[{vdi_group}] Creating new Template for group failed.")
         logger.info(f"[{vdi_group}] Failed Master is getting removed")
         delete_failed_master(master_vmid,vdi_group)

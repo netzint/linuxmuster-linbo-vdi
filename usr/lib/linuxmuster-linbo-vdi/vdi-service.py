@@ -23,7 +23,7 @@ from deleteConnectionFiles import deleteDeprecatedFiles
 import vdi_common
 
 #logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.INFO)
-level = "INFO"
+level = "DEBUG"
 
 if level == "INFO":
     logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] [l%(lineno)4s]- %(message)s',
@@ -60,8 +60,8 @@ def handle_master(group_data,vdi_group):
         t.start()
         
     # if 1 or more master, try delete one
-    elif master_states['summary']['existing_master'] >= 1:
-        logger.info(f"[{vdi_group}] Try to find failed, building or deprecated masters to delete")
+    elif master_states['summary']['existing_master'] > 1:
+        logger.debug(f"[{vdi_group}] Try to find failed, building or deprecated masters to delete")
         #removeMaster.remove_master(group_data,vdi_group)
         t = threading.Thread(target=removeMaster.remove_master, args=(group_data,vdi_group,))
         t.start()
@@ -86,14 +86,14 @@ def handle_master(group_data,vdi_group):
                             vmidLatest = vmid
         if vmidLatest is None:
             logger.info("[{vdi_group}] Theres no finished or building actual Master")
-        logger.info(f"[{vdi_group}] Existing Master(s): {str(existing_vmids)}")
-        logger.info(f"[{vdi_group}] Latest Master: {str(vmidLatest)}")
+        logger.debug(f"[{vdi_group}] Existing Master(s): {str(existing_vmids)}")
+        logger.debug(f"[{vdi_group}] Latest Master: {str(vmidLatest)}")
         if master_states[vmidLatest]['buildstate'] == "building":
             logger.info(f"[{vdi_group}] Master is building")
         # check if master image is up 2 date
         if not master_states['basic']['actual_imagesize'] == master_states[vmidLatest]['imagesize']:
-            logger.info(f"[{vdi_group}] Current imagesize {str(master_states[vmidLatest]['imagesize'])} does not match current image: {str(master_states['basic']['actual_imagesize'])}")
-            logger.info(f"[{vdi_group}] Master Image is not up-to-date => creating new Master")
+            logger.debug(f"[{vdi_group}] Current imagesize {str(master_states[vmidLatest]['imagesize'])} does not match current image: {str(master_states['basic']['actual_imagesize'])}")
+            logger.debug(f"[{vdi_group}] Master Image is not up-to-date => creating new Master")
             #createNewMaster.create_master(group_data,vdi_group)
             t = threading.Thread(target=createNewMaster.create_master, args=(group_data,vdi_group,))
             t.start()
@@ -132,15 +132,15 @@ def handle_clones(group_data, vdi_group):
     if finished_masters >= 1:
         clone_states = get_clone_states(group_data,vdi_group)
         
-        logger.info(f"[{vdi_group}] Clone States Summary for Group {vdi_group}")
-        logger.info(json.dumps(clone_states['summary'],indent=62))
+        logger.debug(f"[{vdi_group}] Clone States Summary for Group {vdi_group}")
+        logger.debug(json.dumps(clone_states['summary'],indent=62))
         
         # if under minimum  ||  if available < prestarted  &&  existing < maximum
         # create clone
         if ( (clone_states['summary']['existing_vms']) < group_data['minimum_vms']) \
                 or ( clone_states['summary']['available_vms'] < group_data['prestarted_vms']
                 and ( clone_states['summary']['existing_vms'] < group_data['maxmimum_vms']) ):
-            logger.info(f"[{vdi_group}]Try to build new Clone ...")
+            logger.debug(f"[{vdi_group}]Try to build new Clone ...")
             #buildClone.build_clone(clone_states,group_data,master_states['current_master']['vmid'],vdi_group)
             t = threading.Thread(target=buildClone.build_clone, args=(clone_states,group_data,master_states['current_master']['vmid'],vdi_group,))
             t.start()
@@ -149,7 +149,7 @@ def handle_clones(group_data, vdi_group):
         # delete clones
         if (clone_states['summary']['available_vms'] > group_data['prestarted_vms']
                 and clone_states['summary']['existing_vms'] > group_data['minimum_vms']):
-            logger.info(f"[{vdi_group}] Try to remove clone...")
+            logger.debug(f"[{vdi_group}] Try to remove clone...")
             #removeClone.remove_clone(master_states,clone_states,group_data,vdi_group)
             t = threading.Thread(target=removeClone.remove_clone, args=(master_states,clone_states,group_data,vdi_group,))
             t.start()

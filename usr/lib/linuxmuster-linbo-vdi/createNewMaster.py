@@ -11,6 +11,7 @@ import nmap
 import re
 import time
 from datetime import datetime
+import json
 #from proxmoxer import ProxmoxAPI
 import logging
 import vdi_common
@@ -254,7 +255,7 @@ def create_master(group_data,vdi_group):
             'name': group_data['name'],
             'vmid': master_vmid,
             #'pool' : masterPool,
-            'description': master_description,
+            'description': json.dumps(master_description),
             'bios': group_data['bios'],
             'boot': group_data['boot'],
             #'bootdisk': group_data['bootdisk'],

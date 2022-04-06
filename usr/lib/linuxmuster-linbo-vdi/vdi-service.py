@@ -97,16 +97,16 @@ def handle_master(group_data,vdi_group):
             #createNewMaster.create_master(group_data,vdi_group)
             t = threading.Thread(target=createNewMaster.create_master, args=(group_data,vdi_group,))
             t.start()
-        
-        # check if hv hardware and options changed
-        # TODO: does this work
-        attributes =['bios','boot','cores','memory','ostype','name','scsihw','usb0','spice_enhancements']
-        for attribute in attributes:
-            if not group_data[attribute] == master_states[vmidLatest][attribute]:
-                logger.info(f"[{vdi_group}] Master Ressources {str(vmidLatest)} are not up to date, try building new master")
-                createNewMaster.create_master(group_data,vdi_group)
+        else:
+            # check if hv hardware and options changed
+            # TODO: does this work
+            attributes =['bios','boot','cores','memory','ostype','name','scsihw','usb0','spice_enhancements']
+            for attribute in attributes:
+                if not group_data[attribute] == master_states[vmidLatest][attribute]:
+                    logger.info(f"[{vdi_group}] Master Ressources {str(vmidLatest)} are not up to date, try building new master")
+                    createNewMaster.create_master(group_data,vdi_group)
 
-        logger.info(f"[{vdi_group}] Master Ressources " + str(vmidLatest) + " are up to date")
+            logger.info(f"[{vdi_group}] Master Ressources " + str(vmidLatest) + " are up to date")
 
         #if group_data['bios'] == master_states[vmidLatest]['bios'] \
         #    and group_data['boot'] == master_states[vmidLatest]['boot'] \

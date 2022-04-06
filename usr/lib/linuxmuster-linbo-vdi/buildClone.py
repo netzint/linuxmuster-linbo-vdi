@@ -61,6 +61,9 @@ def generate_clone_description(group_data,masterVmid, cloneName, vdi_group):
     for os in startConf_data['os']:
         image_name = os['BaseImage']
 
+    imageInfo = vdi_common.image_info_loader(image_name)
+    description["imagesize"] = imageInfo["imagesize"]
+
     description["image"] = image_name
     description["buildstate"] = "building"
     return description

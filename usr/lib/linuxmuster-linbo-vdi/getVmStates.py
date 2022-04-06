@@ -93,9 +93,9 @@ def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
         
         if vm_type == 'master':
             vm_api_infos['timestamp'] = description_json['timestamp']
-            vm_api_infos["imagesize"] = description_json['imagesize']
         
         # used for all vms
+        vm_api_infos["imagesize"] = description_json['imagesize']
         vm_api_infos['dateOfCreation'] = description_json["dateOfCreation"]
         vm_api_infos['buildstate'] = description_json["buildstate"]
         vm_api_infos['vmid'] = vm_id
@@ -194,7 +194,6 @@ def get_needed_imagesize(vdiGroup):
     devicePath = "/srv/linbo/start.conf." + str(vdiGroup)
     startConf_data = vdi_common.start_conf_loader(devicePath)
     
-    # TODO: Handle more than one os
     for os in startConf_data['os']:
         image_name = os['BaseImage']
     imageInfo = vdi_common.image_info_loader(image_name)

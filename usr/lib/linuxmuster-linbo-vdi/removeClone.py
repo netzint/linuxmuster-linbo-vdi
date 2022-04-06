@@ -7,8 +7,7 @@
 # 20201116
 #
 
-import json
-import operator
+import threading
 import time
 import argparse
 import logging
@@ -72,30 +71,53 @@ def wait_for_vm_to_stop(proxmox, timeout, node, vmid,vdi_group):
     logger.warning(f"ERROR: VM couldn't get going down")
     return False
 
-def remove_vms(removeable_vms,node,vdi_group)-> bool:
-    for vmid in removeable_vms:
-        now = datetime.now()
-        now = float(now.strftime("%Y%m%d%H%M%S"))
-        if removeable_vms[vmid]['buildstate'] in ['finished', 'failed', 'building', 'running']:
-            if removeable_vms[vmid]['buildstate'] == "building" and \
-                    ( now - (float(removeable_vms[vmid]['dateOfCreation'])) < 1000):   # 1000 = 10 min
-                    continue
+#def remove_vms(removeable_vms,node,vdi_group)-> bool:
+#    for vmid in removeable_vms:
+#        now = datetime.now()
+#        now = float(now.strftime("%Y%m%d%H%M%S"))
+#        if removeable_vms[vmid]['buildstate'] in ['finished', 'failed', 'building', 'running']:
+#            if removeable_vms[vmid]['buildstate'] == "building" and \
+#                    ( now - (float(removeable_vms[vmid]['dateOfCreation'])) < 1000):   # 1000 = 10 min
+#                    continue
+#
+#            if not removeable_vms[vmid]['status'] == "stopped":
+#                logger.info(f"[{vdi_group} Stop Clone {str(vmid)}...")
+#                proxmox.nodes(node).qemu(vmid).status.stop.post()
+#                while not wait_for_vm_to_stop(proxmox, 20, node, vmid,vdi_group):
+#                    break
+#            try:
+#                proxmox.nodes(node).qemu(vmid).delete()
+#                logger.info(f"[{vdi_group} Deleting stopped VM: {str(vmid)}")
+#                return True
+#            except Exception as err:
+#                logger.info(f"[{vdi_group} Deleting error:")
+#                logger.info(f"[{vdi_group} {str(err)}")
+#                return False
 
-            if not removeable_vms[vmid]['status'] == "stopped":
-                logger.info(f"[{vdi_group} Stop Clone {str(vmid)}...")
-                proxmox.nodes(node).qemu(vmid).status.stop.post()
-                while not wait_for_vm_to_stop(proxmox, 20, node, vmid,vdi_group):
-                    break
-            try:
-                proxmox.nodes(node).qemu(vmid).delete()
-                logger.info(f"[{vdi_group} Deleting stopped VM: {str(vmid)}")
-                return True
-            except Exception as err:
-                logger.info(f"[{vdi_group} Deleting error:")
-                logger.info(f"[{vdi_group} {str(err)}")
-                return False
+def remove_vm(vmid):
+    try:
+        if proxmox.nodes(node).qemu(vmid).status.current.get() != "stopped":
+            proxmox.nodes(node).qemu(vmid).status.stop.post()
+            time.sleep(3)
+        proxmox.nodes(node).qemu(vmid).delete()
+    except:
+        return
 
-def remove_clone(master_states,clone_states,group_data,vdi_group):
+def remove_outdated_clones(outdated_clones, clone_states, vdi_group):
+        assignedIDs = get_assigned_ids(clone_states)
+        threads = []
+        for outdated_clone in outdated_clones:
+            if outdated_clone['vmid'] not in assignedIDs:
+                vmid = outdated_clone['vmid']
+                t = threading.Thread(target=remove_vm, args=(vmid,))
+                threads.append(t)
+                t.start()
+        for thread in threads:
+            thread.join()
+        return
+
+
+def remove_clone(clone_states, vdi_group):
 
     logger.debug(f"{vdi_group} Begin removeClone")
     del clone_states['summary']
@@ -104,52 +126,18 @@ def remove_clone(master_states,clone_states,group_data,vdi_group):
     assignedIDs = get_assigned_ids(clone_states)
     removeable_vms ={}
     for vmid in clone_states:
-        if vmid not in assignedIDs and 'status' in clone_states[vmid]: # probleme bei "in" und .pop(), daher "not in"
+        if vmid not in assignedIDs and 'status' in clone_states[vmid]:
             removeable_vms[vmid] = clone_states[vmid]
 
-    ## Check Ausgabe
-    #logger.info("*** Clone States: ***")
-    #logger.info(clone_states.keys())
-    #logger.info("*** Assigned Clones: ***")
-    #logger.info(assignedIDs)
-    #logger.info("*** Removeable Clones: ***")
-    #logger.info(removeable_vms.keys())
-
-    # get latest Master
-    #masterInfos = getMasterDetails(vdiGroup)
-    #masterVmids = group_data['vmids']
-    #timestampLatestMaster = get_current_master(node, group_data['vmids'])
-    current_master = vdi_common.get_current_master(master_states, group_data['vmids'], vdi_group)
-
-    remove_vms(removeable_vms,node,vdi_group)
-
-    # TODO- das rein
-    ## if image deprecated:
-    #for vmid in removeable_vms:
-    #        dateOfCreation = float(removeable_vms[vmid]['dateOfCreation'])
-    #        if dateOfCreation <= float(current_master['timestamp']):
-    #            logger.info("*** Found deprecated Clone: ***")
-    #            logger.info(vmid)
-    #            try:
-    #                status = removeable_vms[vmid]['status']
-    #                if status == "running":
-    #                    proxmox.nodes(node).qemu(vmid).status.stop.post()
-    #                    logger.info("*** Clone " + str(vmid) + " is getting stopped. ***")
-    #                    if wait_for_vm_to_stop(proxmox, 20, node, vmid) == True:
-    #                        try:
-    #                            proxmox.nodes(node).qemu(vmid).delete()
-    #                            print("*** Deleting deprecated VM: " + str(vmid) + " ***")
-    #                            return
-    #                        except Exception as err:
-    #                            print("*** Deleting error: ***")
-    #                            logger.info(err)
-    #                else:
-    #                    proxmox.nodes(node).qemu(vmid).delete()
-    #                    print("*** Deleting deprecated VM: " + str(vmid) + " ***")
-    #                    return
-    #            except Exception as err:
-    #                logger.info(err)
-    #logger.info("*** No deprecated VMs exists ***")
+    #remove_vms(removeable_vms,node,vdi_group)
+    threads = []
+    for removeable_vm in removeable_vms:
+            t = threading.Thread(target=remove_vm, args=(removeable_vm,))
+            threads.append(t)
+            t.start()
+    for thread in threads:
+        thread.join()
+    return
 
 def remove_every_clone(vdi_group):
     vdi_groups = vdi_common.get_vdi_groups()
@@ -157,12 +145,6 @@ def remove_every_clone(vdi_group):
         clone_states = get_clone_states(vdi_groups['groups'][vdi_group],vdi_group)
         remove_vms(clone_states,node,vdi_group)
 
-def remove_vm(vmid):
-
-    if proxmox.nodes(node).qemu(vmid).status.current.get() != "stopped":
-        proxmox.nodes(node).qemu(vmid).status.stop.post()
-        time.sleep(3)
-    proxmox.nodes(node).qemu(vmid).delete()
 
 
 if __name__ == "__main__":

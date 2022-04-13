@@ -111,6 +111,46 @@ def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
 
 
 ####### CLONES: ########
+
+def get_all_states(vm_type)-> dict:
+    if vm_type not in ['clone', 'master']:
+        logger.error("wrong vm_type provided")
+        return 1
+    vdi_groups = vdi_common.get_vdi_groups()
+    allInfos={}
+    for vdi_group in vdi_groups['groups']:
+        if vm_type == 'master':
+            # TODO fix this in gui and here, just use basic for god sake...
+            states = get_master_states(vdi_groups['groups'][vdi_group], vdi_group)
+            allInfos.update({vdi_group:{'summary':states['summary']}})
+            states.pop('summary')
+            allInfos[vdi_group]['current_master'] = states['current_master']
+            allInfos[vdi_group]['current_master']['hostname'] = states['basic']['hostname']
+            allInfos[vdi_group]['current_master']['actual_imagesize'] = states['basic']['actual_imagesize']
+            allInfos[vdi_group]['current_master']['ip'] = states['basic']['ip']
+            allInfos[vdi_group]['current_master']['mac'] = states['basic']['mac']
+            states.pop('basic')
+            states.pop('current_master')
+            allInfos[vdi_group]['master_vms'] ={}
+            for vm in states:
+                allInfos[vdi_group]['master_vms'].update({vm: states[vm]})
+ 
+            #allInfos[vdi_group]['master_vms'] = states
+            #allInfos[vdi_group]['hostname'] = states['basic']['hostname']
+            #allInfos[vdi_group]['actual_imagesize'] = states['basic']['actual_imagesize']
+            #allInfos[vdi_group]['ip'] = states['basic']['ip']
+            #allInfos[vdi_group]['mac'] = states['basic']['mac']
+
+        elif vm_type == 'clone':
+            states = get_clone_states(vdi_groups['groups'][vdi_group], vdi_group)
+            allInfos.update({vdi_group:{'summary':states['summary']}})
+            states.pop('summary')
+            allInfos[vdi_group]['clone_vms'] = states
+
+
+
+    return allInfos
+
 def get_clone_states(group_data,vdi_group)-> dict:
 
     vdi_common.check_connection()
@@ -122,9 +162,19 @@ def get_clone_states(group_data,vdi_group)-> dict:
     devices = vdi_common.devices_loader(school_id)
     idRange = vdi_common.get_vmid_range(devices, vdi_group)
 
-
     ####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one dict #######
     clone_states = get_vm_info_multithreaded(idRange,node,vdi_group,'clone')
+
+    # expand information by devices.csv
+    # TODO: move this to the get_vm_info_multithreaded function
+    for vmid in clone_states:
+            for device in devices:
+                if vmid == device[11]:
+                    clone_states[vmid]['room'] = device[0]
+                    clone_states[vmid]['hostname'] = device[1]
+                    clone_states[vmid]['ip'] = device[4]
+                    clone_states[vmid]['mac'] = device[3]
+
 
     ####### adds user field if vm is used by an user #######
     logged_in_users = vdi_common.getSmbstatus(school_id)
@@ -135,6 +185,7 @@ def get_clone_states(group_data,vdi_group)-> dict:
                     clone_states[vmid]['user'] = logged_in_users[user]['full']
                 if 'user' not in clone_states[vmid]:
                     clone_states[vmid]['user'] = ''
+
 
     else:
         for vmid in clone_states:
@@ -289,11 +340,18 @@ if __name__ == "__main__":
         print (__version__)
         quit()
     if args.master is not False:
-        # TODO Fix this for CLI
-        print(json.dumps(get_master_states(args.group), indent=2))
+        if args.group != 'all':
+            group_data = vdi_common.get_vdi_groups()['groups'][args.group]
+            print(json.dumps(get_master_states(group_data,args.group), indent=2))     
+        else:
+            print(json.dumps(get_all_states('master'), indent=2))
         quit()
     if args.clones is not False:
-        print(json.dumps(get_clone_states(args.group), indent=2))
+        if args.group != 'all':
+            group_data = vdi_common.get_vdi_groups()['groups'][args.group]
+            print(json.dumps(get_clone_states(group_data,args.group), indent=2))
+        else:
+            print (json.dumps(get_all_states('clone'), indent=2))
         quit()
     else:
         parser.print_help()

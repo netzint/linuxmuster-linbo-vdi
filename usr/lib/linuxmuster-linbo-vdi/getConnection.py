@@ -11,10 +11,11 @@ import random
 import string
 import sys
 from globalValues import node,proxmox,hvIp,timeoutConnectionRequest
-from getVmStates import mainClones
+from getVmStates import get_clone_states
+import vdi_common
 import json
 from datetime import datetime
-import getVmStates
+#import getVmStates
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,24 +63,25 @@ def sendConnection(node, vmid, user):
 
 def main(arguments):
 
-    group = arguments[1]
+    vdi_group = arguments[1]
     requestUser = arguments[2]
+    group_data = vdi_common.get_vdi_groups()['groups'][vdi_group]
 
-    vmStates = getVmStates.mainClones(group,quiet=True)
-    del vmStates['summary']
+    vm_states = get_clone_states(group_data,vdi_group)
+    del vm_states['summary']
 
     ########################
     now = datetime.now()
     now = float(now.strftime("%Y%m%d%H%M%S"))  # => "20201102141556"
 
     ######## 1) if user already had a spice connection under 10 minutes
-    for vmid in vmStates:
+    for vmid in vm_states:
         try:
-            if vmStates[vmid]['buildstate'] == "finished":
-                if vmStates[vmid]['lastConnectionRequestUser'] == requestUser:
+            if vm_states[vmid]['buildstate'] == "finished":
+                if vm_states[vmid]['lastConnectionRequestUser'] == requestUser:
                         #print(vmid)
-                        if  vmStates[vmid]['lastConnectionRequestTime'] != "":
-                            passedTime = now - float(vmStates[vmid]['lastConnectionRequestTime'])
+                        if  vm_states[vmid]['lastConnectionRequestTime'] != "":
+                            passedTime = now - float(vm_states[vmid]['lastConnectionRequestTime'])
                             passedTime = 0
                             if float(passedTime) < float(timeoutConnectionRequest):
                                 return(sendConnection(node, vmid, requestUser))
@@ -89,10 +91,10 @@ def main(arguments):
 
     ######## 2) try giving neverUsed Vmid
     neverUsedVmids = []
-    for vmid in vmStates:
+    for vmid in vm_states:
         try:
-            if vmStates[vmid]['buildstate'] == "finished":
-                if vmStates[vmid]['lastConnectionRequestTime'] == "" and vmStates[vmid]['user'] == "":
+            if vm_states[vmid]['buildstate'] == "finished":
+                if vm_states[vmid]['lastConnectionRequestTime'] == "" and vm_states[vmid]['user'] == "":
                     neverUsedVmids.append(vmid)
         except Exception:
             continue
@@ -100,19 +102,19 @@ def main(arguments):
         vmid = random.choice(neverUsedVmids)
         return(sendConnection(node, vmid, requestUser))
     except Exception as err:
-        #print(err)
-        pass
+        print(err)
+        
 
 
     #print(float(timeoutConnectionRequest))
 
     ######### 3) try giving not any more used Vmid
     availableVmids = []
-    for vmid in vmStates:
+    for vmid in vm_states:
         try:
-            if vmStates[vmid]['buildstate'] == "finished":
-                if vmStates[vmid]['lastConnectionRequestTime'] != "" and vmStates[vmid]['user'] == "":
-                    lastTime = float(vmStates[vmid]['lastConnectionRequestTime'])
+            if vm_states[vmid]['buildstate'] == "finished":
+                if vm_states[vmid]['lastConnectionRequestTime'] != "" and vm_states[vmid]['user'] == "":
+                    lastTime = float(vm_states[vmid]['lastConnectionRequestTime'])
                     passedTime = now - lastTime
                     if passedTime > float(timeoutConnectionRequest):
                             availableVmids.append(vmid)

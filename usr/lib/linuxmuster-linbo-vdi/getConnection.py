@@ -9,6 +9,7 @@
 
 import random
 import string
+import os
 import sys
 from globalValues import node,proxmox,hvIp,timeoutConnectionRequest
 from getVmStates import get_clone_states
@@ -39,7 +40,10 @@ def sendConnection(node, vmid, user):
 
     timestamp = datetime.now()
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")
-
+    
+    if not os.path.exists('/tmp/vdi'):
+        os.makedirs('/tmp/vdi')
+        
     configFilePath = "/tmp/vdi/start-vdi-" + str(dateOfCreation) + "-" + ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=6)) + ".vv"
     with open(configFilePath, "w") as outfile:
         outfile.write("[virt-viewer]" + "\n")
@@ -63,6 +67,7 @@ def sendConnection(node, vmid, user):
 
 def main(arguments):
 
+    # TODO argparse
     vdi_group = arguments[1]
     requestUser = arguments[2]
     group_data = vdi_common.get_vdi_groups()['groups'][vdi_group]
@@ -83,23 +88,24 @@ def main(arguments):
                         if  vm_states[vmid]['lastConnectionRequestTime'] != "":
                             passedTime = now - float(vm_states[vmid]['lastConnectionRequestTime'])
                             passedTime = 0
+                            # TODO do not use float for timedifference
                             if float(passedTime) < float(timeoutConnectionRequest):
                                 return(sendConnection(node, vmid, requestUser))
         except Exception as err:
-            #print(err) # => vm doenst exist => besser auf existierende loopen
-            continue
+            print(err) # => vm doenst exist => besser auf existierende loopen
+            #continue
 
     ######## 2) try giving neverUsed Vmid
-    neverUsedVmids = []
+    unnused_vm = []
     for vmid in vm_states:
-        try:
-            if vm_states[vmid]['buildstate'] == "finished":
-                if vm_states[vmid]['lastConnectionRequestTime'] == "" and vm_states[vmid]['user'] == "":
-                    neverUsedVmids.append(vmid)
-        except Exception:
-            continue
+        #try:
+        if vm_states[vmid]['buildstate'] == "finished":
+            if vm_states[vmid]['lastConnectionRequestTime'] == "" and vm_states[vmid]['user'] == "":
+                unnused_vm.append(vmid)
+        #except Exception:
+        #    continue
     try:
-        vmid = random.choice(neverUsedVmids)
+        vmid = random.choice(unnused_vm)
         return(sendConnection(node, vmid, requestUser))
     except Exception as err:
         print(err)

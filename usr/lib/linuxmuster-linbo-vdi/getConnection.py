@@ -11,7 +11,7 @@ import random
 import string
 import os
 import sys
-from globalValues import node,proxmox,hvIp,timeoutConnectionRequest
+from globalValues import node,proxmox,hvIp,timeoutConnectionRequest,proxy_url
 from getVmStates import get_clone_states
 import vdi_common
 import json
@@ -54,7 +54,7 @@ def sendConnection(node, vmid, user):
         outfile.write("toggle-fullscreen" + "=" + str(virtViewerDictionary["toggle-fullscreen"]) + "\n")
         outfile.write("title" + "=" + str(virtViewerDictionary["title"]) + "\n")
         outfile.write("tls-port" + "=" + str(virtViewerDictionary["tls-port"]) + "\n")
-        outfile.write("proxy" + "=" + str(virtViewerDictionary["proxy"]) + "\n")
+        outfile.write("proxy" + "=" + "http://" + str(proxy_url)+":3128" + "\n")
         outfile.write("password" + "=" + str(virtViewerDictionary["password"]) + "\n")
         outfile.write("release-cursor" + "=" + str(virtViewerDictionary["release-cursor"]) + "\n")
         outfile.write("host" + "=" + str(virtViewerDictionary["host"]) + "\n")

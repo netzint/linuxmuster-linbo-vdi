@@ -33,6 +33,8 @@ global vdiLocalService # True => running service on server VM,# False => remote
 vdiLocalService = vdiConfig['vdiLocalService']
 global nmapPorts
 nmapPorts = vdiConfig['nmapPorts'].split(',')
+global proxy_url
+proxy_url = vdiConfig['proxy_url']
 global ssh
 ssh = paramiko.SSHClient()
 

@@ -1,3 +1,9 @@
+linuxmuster-linbo-vdi (0.90.25-1) lmn71; urgency=low
+
+  *  Fixed postinst script
+
+ -- Andreas Till <andreas.till@netzint.de>  Mon, 09 May 2022 18:54:29 +0200
+
 linuxmuster-linbo-vdi (0.90.24-1) lmn71; urgency=low
 
   * fixed typo in debian postinst preventing daemon from starting

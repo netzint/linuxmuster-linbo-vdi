@@ -1,3 +1,9 @@
+linuxmuster-linbo-vdi (0.90.23-1) lmn71; urgency=low
+
+  * Fixed Clone generating and user determination
+
+ -- Andreas Till <andreas.till@netzint.de>  Mon, 09 May 2022 17:41:03 +0200
+
 linuxmuster-linbo-vdi (0.90.22-1) lmn71; urgency=low
 
   * First autobuild for lmn71

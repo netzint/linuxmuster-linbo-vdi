@@ -132,13 +132,16 @@ def remove_clone(vm_amount_to_delete,clone_states, vdi_group):
                 break
 
     #remove_vms(removeable_vms,node,vdi_group)
-    threads = []
+    
     for removeable_vm in removeable_vms:
-            t = threading.Thread(target=remove_vm, args=(removeable_vm,))
-            threads.append(t)
-            t.start()
-    for thread in threads:
-        thread.join()
+        remove_vm(removeable_vm)
+    #threads = []
+    #for removeable_vm in removeable_vms:
+    #        t = threading.Thread(target=remove_vm, args=(removeable_vm,))
+    #        threads.append(t)
+    #        t.start()
+    #for thread in threads:
+    #    thread.join()
     return
 
 def remove_every_clone(vdi_group):

@@ -78,7 +78,7 @@ def devices_loader(schoolId) -> list:
             list = []
             reader = csv.reader(csvfile, delimiter=';')
             for row in reader:
-                if row[0][0] == '#' or len(row) < 12:
+                if len(row) < 12 or row[0][0] == '#':
                     continue
                 list.append(row)
             return list
@@ -229,17 +229,17 @@ def getSmbstatus(schoolId = "default-school"):
                             # TODO Figure out how to hide the paramiko logging
                             sshSmbstatus.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                             sshSmbstatus.connect(fileserver, port=22, username='root')
-                            sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(smbstatus_command)      
-
-                        
-                        loggedIn = {}
-                        for line in sshSmbstatus_stdout.readlines():
-                            #line = str(line, 'ascii')
-                            ip = line.split()[4]
-                            user = line.split()[1]
-                            domain, user = user.split("\\")
-                            if line.split()[3] == "users":
-                                loggedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
+                            sshSmbstatus_stdin, sshSmbstatus_stdout, sshSmbstatus_stderr = sshSmbstatus.exec_command(smbstatus_command)
+                            sshSmbstatus_stderr.channel.recv_exit_status()
+   
+                            loggedIn = {}
+                            for line in sshSmbstatus_stdout.readlines():
+                                #line = str(line, 'ascii')
+                                ip = line.split()[4]
+                                user = line.split()[1]
+                                domain, user = user.split("\\")
+                                if line.split()[3] == "users":
+                                    loggedIn[user]= {"ip": ip, "domain": domain, "full": r"{}\{}".format(domain,user)}
                         return loggedIn
             except Exception as err:
                 logging.error("Some Error while net conf list to fileserver")

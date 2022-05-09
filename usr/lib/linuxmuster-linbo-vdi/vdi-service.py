@@ -126,11 +126,14 @@ def handle_clones(group_data, vdi_group):
             f"[{vdi_group}] Clone States Summary for Group {vdi_group}")
         logger.debug(json.dumps(clone_states['summary'], indent=62))
 
+
         # if under minimum  ||  if available < prestarted  &&  existing < maximum
         # create clone
-        if ((clone_states['summary']['existing_vms']) < group_data['minimum_vms']) \
-                or (clone_states['summary']['available_vms'] < group_data['prestarted_vms']
-                    and (clone_states['summary']['existing_vms'] < group_data['maxmimum_vms'])):
+        if clone_states['summary']['existing_vms'] < group_data['minimum_vms'] and clone_states['summary']['building_vms'] < (group_data['minimum_vms'] - clone_states['summary']['existing_vms'])\
+                or clone_states['summary']['available_vms'] < group_data['prestarted_vms'] \
+                and clone_states['summary']['existing_vms'] < group_data['maxmimum_vms'] \
+                and clone_states['summary']['building_vms'] < (group_data['prestarted_vms']-clone_states['summary']['available_vms']):
+
             logger.debug(f"[{vdi_group}]Try to build new Clone ...")
             # buildClone.build_clone(clone_states,group_data,master_states['current_master']['vmid'],vdi_group)
             t = threading.Thread(target=buildClone.build_clone, args=(
@@ -140,8 +143,9 @@ def handle_clones(group_data, vdi_group):
 
         # if (available > prestarted) || existing > minimum)
         # delete clones
-        elif (clone_states['summary']['available_vms'] > group_data['prestarted_vms']
-                and clone_states['summary']['existing_vms'] > group_data['minimum_vms']):
+        elif clone_states['summary']['available_vms'] > group_data['prestarted_vms']\
+                and clone_states['summary']['existing_vms'] > group_data['minimum_vms']:
+
             vm_amount_to_delete = clone_states['summary']['existing_vms'] - group_data['minimum_vms']
             logger.debug(f"[{vdi_group}] Try to remove clone...")
             removeClone.remove_clone(vm_amount_to_delete, clone_states, vdi_group,)
@@ -151,18 +155,20 @@ def handle_clones(group_data, vdi_group):
 
         # update outdated clones
         outdated_clones = []
-        del clone_states['summary']
+        if 'summary' in clone_states:
+            del clone_states['summary']
         for clone in clone_states:
-            # TODO string Datetime to real datetime objects... 
             now = datetime.now()
-            now = now.strftime("%Y%m%d%H%M%S")
-            # 1000 = 10 min:
+            #now_string = now.strftime("%Y%m%d%H%M%S")
+            date_of_creation = datetime.strptime(clone_states[clone]['dateOfCreation'], "%Y%m%d%H%M%S")
+            minutes_since_building = (now - date_of_creation).seconds / 60
+            building_timeout_minutes = 10 
+            
             if clone_states[clone]['master'] != master_vm_id or \
-                clone_states[clone]['imagesize'] != master_states[master_vm_id]['imagesize']:# or \
-                #clone_states[clone]['buildstate'] == "building" and (float(now) - (float(clone_states[clone]['dateOfCreation'])) < 1000):
-                # Todo fix failed builds...
-
-                outdated_clones.append(clone_states[clone])
+                clone_states[clone]['imagesize'] != master_states[master_vm_id]['imagesize'] or \
+                clone_states[clone]['buildstate'] == "building" and minutes_since_building > building_timeout_minutes:
+                    # Todo fix failed builds...
+                    outdated_clones.append(clone_states[clone])
 
             if len(outdated_clones) > 0:
                 removeClone.remove_outdated_clones(

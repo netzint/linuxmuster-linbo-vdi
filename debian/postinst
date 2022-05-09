@@ -54,11 +54,11 @@ case "$1" in
             echo "Stop linuxmuster-linbo-vdi"
 
             systemctl is-active --quiet linuxmuster-linbo-vdi
-	        runbefore=$?
-            
+            runbefore=$?
+
             # stop service if running before
             if [ $runbefore -eq 0 ]
-              then  
+              then
                 echo "Stop linuxmuster-linbo-vdi service"
                 systemctl stop linuxmuster-linbo-vdi
             fi
@@ -78,7 +78,7 @@ case "$1" in
             if [ $runbefore -eq 0 ]
              then
               echo "Start linuxmuster-linbo-vdi service"
-              systemctl start linuxmuster-libo-vdi
+              systemctl start linuxmuster-linbo-vdi
             fi
 
             echo "---------------------------------------------------------------"

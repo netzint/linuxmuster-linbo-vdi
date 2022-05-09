@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 case "$1" in
@@ -53,11 +53,10 @@ case "$1" in
             echo "---------------------------------------------------------------"
             echo "Stop linuxmuster-linbo-vdi"
 
-            systemctl is-active --quiet linuxmuster-linbo-vdi
-	        runbefore=$?
+            service_status=$(systemctl show -p SubState --value linuxmuster-linbo-vdi.service)
             
             # stop service if running before
-            if [ $runbefore -eq 0 ]
+            if [ "$service_status" == "running" ]
               then  
                 echo "Stop linuxmuster-linbo-vdi service"
                 systemctl stop linuxmuster-linbo-vdi
@@ -75,10 +74,10 @@ case "$1" in
             systemctl daemon-reload
 
             # start service if running before
-            if [ $runbefore -eq 0 ]
+            if [ "$service_status" == "running" ]
              then
               echo "Start linuxmuster-linbo-vdi service"
-              systemctl start linuxmuster-libo-vdi
+              systemctl start linuxmuster-linbo-vdi
             fi
 
             echo "---------------------------------------------------------------"

@@ -86,7 +86,13 @@ def devices_loader(schoolId) -> list:
 
 def json_loader(path_to_file) -> dict:
         reader = open(path_to_file, 'r')
-        content = json.load(reader)
+        try:
+            content = json.load(reader)
+        
+        except Exception as err:
+            logging.error("Error parsing config file")
+            logging.error(err)
+            return False
         return content
 
 def getFileContent(path_to_file):
@@ -114,10 +120,11 @@ def get_vdi_groups() -> dict:
     vdi_groups={'general':{'active_groups':[]}, 'groups':{}}
     for vdi_file in glob.glob("/srv/linbo/*.vdi"):
         data = json_loader(vdi_file)
-        vdi_group = vdi_file.split("/srv/linbo/start.conf.")[1].split('.vdi')[0]
-        vdi_groups['groups'][vdi_group]=data
-        if vdi_groups['groups'][vdi_group]['activated']:
-            vdi_groups['general']['active_groups'].append(vdi_group)
+        if data:
+            vdi_group = vdi_file.split("/srv/linbo/start.conf.")[1].split('.vdi')[0]
+            vdi_groups['groups'][vdi_group]=data
+            if vdi_groups['groups'][vdi_group]['activated']:
+                vdi_groups['general']['active_groups'].append(vdi_group)
     return vdi_groups
 
 

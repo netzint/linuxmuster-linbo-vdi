@@ -23,7 +23,7 @@ import vdi_common
 from datetime import datetime
 
 #logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.INFO)
-level = "DEBUG"
+level = "INFO"
 
 if level == "INFO":
     logging.basicConfig(format='%(asctime)s %(levelname)7s: [%(filename)19s] [l%(lineno)4s]- %(message)s',

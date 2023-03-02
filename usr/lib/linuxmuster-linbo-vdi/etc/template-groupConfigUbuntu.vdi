@@ -24,7 +24,7 @@
 "usb0" : "host=spice,usb3=1",
 "spice_enhancements" : "foldersharing=1,videostreaming=all",
 "minimum_vms" : 1,
-"maxmimum_vms" : 3,
+"maximum_vms" : 3,
 "prestarted_vms" : 1,
 "timeout_building_master" : 750,
 "timeout_building_clone" : 400

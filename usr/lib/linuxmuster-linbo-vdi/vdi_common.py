@@ -70,10 +70,13 @@ def image_info_loader(image_name) -> dict:
     return data
 
 def devices_loader(schoolId) -> list:
-        if schoolId != "" or schoolId != "default-school":
+
+        devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
+        if schoolId and schoolId != "default-school" and schoolId != "":
             devicePath = "/etc/linuxmuster/sophomorix/" + str(schoolId) + "/" + str(schoolId) + ".devices.csv"
-        else:
-            devicePath = "/etc/linuxmuster/sophomorix/default-school/devices.csv"
+        
+            
+        #print(devicePath)
         with open (devicePath, newline='') as csvfile:
             list = []
             reader = csv.reader(csvfile, delimiter=';')
@@ -135,7 +138,7 @@ def get_vmid_range(devices,vdi_group):
     vmidRange = []
     for device in devices:
         if vdi_group in device[2]:
-            if "master" not in device[1] and device[11] is not "":
+            if "master" != device[1] and device[11] != "":
                 vmid = device[11]
                 vmidRange.append(vmid)
     return vmidRange

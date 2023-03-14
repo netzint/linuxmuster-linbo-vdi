@@ -126,26 +126,43 @@ def handle_clones(group_data, vdi_group):
             f"[{vdi_group}] Clone States Summary for Group {vdi_group}")
         logger.debug(json.dumps(clone_states['summary'], indent=62))
 
+        existing_vms = clone_states['summary']['existing_vms']
+        building_vms = clone_states['summary']['building_vms']
+        available_vms = clone_states['summary']['available_vms']
+        min_vms = group_data['minimum_vms']
+        max_vms = group_data['maximum_vms']
+        prestarted_vms = group_data['prestarted_vms']
 
-        # if under minimum  ||  if available < prestarted  &&  existing < maximum
-        # create clone
-        if clone_states['summary']['existing_vms'] < group_data['minimum_vms'] and clone_states['summary']['building_vms'] < (group_data['minimum_vms'] - clone_states['summary']['existing_vms'])\
-                or clone_states['summary']['available_vms'] < group_data['prestarted_vms'] \
-                and clone_states['summary']['existing_vms'] < group_data['maxmimum_vms'] \
-                and clone_states['summary']['building_vms'] < (group_data['prestarted_vms']-clone_states['summary']['available_vms']):
+        not_enough_min_clones = existing_vms < min_vms and building_vms < (min_vms - existing_vms)
+        not_enough_prestarted_clones = available_vms < prestarted_vms and existing_vms < max_vms and building_vms < (prestarted_vms - available_vms)
 
-            logger.debug(f"[{vdi_group}]Try to build new Clone ...")
-            # buildClone.build_clone(clone_states,group_data,master_states['current_master']['vmid'],vdi_group)
+        if not_enough_min_clones or not_enough_prestarted_clones:
+            logger.debug(f"[{vdi_group}] Try to build new Clone ...")
             t = threading.Thread(target=buildClone.build_clone, args=(
                 clone_states, group_data, master_states['current_master']['vmid'], vdi_group,))
             t.start()
-            # time.sleep(5)
+
+        # if under minimum  ||  if available < prestarted  &&  existing < maximum
+        # create clone
+        #if clone_states['summary']['existing_vms'] < group_data['minimum_vms'] and clone_states['summary']['building_vms'] < (group_data['minimum_vms'] - clone_states['summary']['existing_vms'])\
+        #        or clone_states['summary']['available_vms'] < group_data['prestarted_vms'] \
+        #        and clone_states['summary']['existing_vms'] < group_data['maxmimum_vms'] \
+        #        and clone_states['summary']['building_vms'] < (group_data['prestarted_vms']-clone_states['summary']['available_vms']):
+#
+        #    logger.debug(f"[{vdi_group}]Try to build new Clone ...")
+        #    # buildClone.build_clone(clone_states,group_data,master_states['current_master']['vmid'],vdi_group)
+        #    t = threading.Thread(target=buildClone.build_clone, args=(
+        #        clone_states, group_data, master_states['current_master']['vmid'], vdi_group,))
+        #    t.start()
+        #    # time.sleep(5)
 
         # if (available > prestarted) || existing > minimum)
         # delete clones
-        elif clone_states['summary']['available_vms'] > group_data['prestarted_vms']\
-                and clone_states['summary']['existing_vms'] > group_data['minimum_vms']:
+        too_much_clones = available_vms > prestarted_vms and existing_vms > min_vms
 
+        #elif clone_states['summary']['available_vms'] > group_data['prestarted_vms']\
+        #        and clone_states['summary']['existing_vms'] > group_data['minimum_vms']:
+        if too_much_clones:
             vm_amount_to_delete = clone_states['summary']['existing_vms'] - group_data['minimum_vms']
             logger.debug(f"[{vdi_group}] Try to remove clone...")
             removeClone.remove_clone(vm_amount_to_delete, clone_states, vdi_group,)
@@ -157,22 +174,30 @@ def handle_clones(group_data, vdi_group):
         outdated_clones = []
         if 'summary' in clone_states:
             del clone_states['summary']
-        for clone in clone_states:
-            now = datetime.now()
-            #now_string = now.strftime("%Y%m%d%H%M%S")
-            date_of_creation = datetime.strptime(clone_states[clone]['dateOfCreation'], "%Y%m%d%H%M%S")
-            minutes_since_building = (now - date_of_creation).seconds / 60
-            building_timeout_minutes = 10 
-            
-            if clone_states[clone]['master'] != master_vm_id or \
-                clone_states[clone]['imagesize'] != master_states[master_vm_id]['imagesize'] or \
-                clone_states[clone]['buildstate'] == "building" and minutes_since_building > building_timeout_minutes:
-                    # Todo fix failed builds...
-                    outdated_clones.append(clone_states[clone])
+        
+        # Set building timeout to 10 minutes
+        BUILDING_TIMEOUT_MINUTES = 10
 
-            if len(outdated_clones) > 0:
-                removeClone.remove_outdated_clones(
-                    outdated_clones, clone_states, vdi_group)
+        # Get the current datetime
+        now = datetime.now()
+
+        # Iterate over the clones
+        for clone, clone_state in clone_states.items():
+            # Get the clone's creation datetime and calculate the time since creation
+            date_of_creation = datetime.strptime(clone_state['dateOfCreation'], "%Y%m%d%H%M%S")
+            minutes_since_building = (now - date_of_creation).seconds / 60
+        
+            # Check if the clone is outdated based on its state and creation time
+            if (clone_state['master'] != master_vm_id or
+                clone_state['imagesize'] != master_states[master_vm_id]['imagesize'] or
+                (clone_state['buildstate'] == "building" and minutes_since_building > BUILDING_TIMEOUT_MINUTES)):
+                # Add the outdated clone to the list
+                outdated_clones.append(clone_state)
+        
+        # Remove any outdated clones
+        if outdated_clones:
+            removeClone.remove_outdated_clones(outdated_clones, clone_states, vdi_group)
+
 
     else:
         logger.info(f"[{vdi_group}] No master ready for clone handling")

@@ -46,15 +46,21 @@ def get_vm_group_infos(devices, vmid)-> dict:
 
 def get_master_group_infos(devices, master_hostname)-> dict:
     vdiGroupInfos = {}
+    master_found = False
     for device in devices:
         if master_hostname in device[1]:
+            master_found = True
             vdiGroupInfos['room'] = device[0]
             vdiGroupInfos['hostname'] = device[1]
             vdiGroupInfos['group'] = device[2]
             vdiGroupInfos['mac'] = device[3]
             vdiGroupInfos['ip'] = device[4]
             vdiGroupInfos['pxe'] = device[10]
-    return vdiGroupInfos
+    if master_found:
+        return vdiGroupInfos
+    else:
+        logger.warning(f"Could not find master_hostname in devices")
+        return False
 
 ## get information from existing VMs  
 def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
@@ -121,9 +127,13 @@ def get_all_states(vm_type)-> dict:
     for vdi_group in vdi_groups['groups']:
         if vm_type == 'master':
             # TODO fix this in gui and here, just use basic for god sake...
+
             states = get_master_states(vdi_groups['groups'][vdi_group], vdi_group)
+            if not states:
+                continue
             allInfos.update({vdi_group:{'summary':states['summary']}})
             states.pop('summary')
+
             allInfos[vdi_group]['current_master'] = states['current_master']
             allInfos[vdi_group]['current_master']['hostname'] = states['basic']['hostname']
             allInfos[vdi_group]['current_master']['actual_imagesize'] = states['basic']['actual_imagesize']
@@ -285,6 +295,8 @@ def get_master_states(group_data,vdi_group) -> dict:
 
 
     master_states['basic'] = get_master_group_infos(devices, master_hostname)
+    if not master_states['basic']:
+        return False
     master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group)
     master_states['basic']['hostname'] = master_hostname
     allApiInfos = {}

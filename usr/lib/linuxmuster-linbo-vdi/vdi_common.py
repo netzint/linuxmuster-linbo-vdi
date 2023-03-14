@@ -12,6 +12,8 @@ import paramiko
 
 from globalValues import vdiLocalService, ssh, proxmox, node
 
+logger = logging.getLogger(__name__)
+
 
 def start_conf_loader(path_to_file)-> dict:
     """Returns all info of a start.conf file
@@ -115,8 +117,9 @@ def get_school_id(vdiGroup):
         schoolId = parser['LINBO']['School']      
         return schoolId
     except Exception as err:
-        logging.error("Problem finding school ID")
-        logging.error(err)
+        logger.error("Problem finding school ID")
+        logger.error(err)
+        return False
 
 # get all vdi groups
 def get_vdi_groups() -> dict:

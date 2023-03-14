@@ -153,6 +153,8 @@ def get_all_states(vm_type)-> dict:
 
         elif vm_type == 'clone':
             states = get_clone_states(vdi_groups['groups'][vdi_group], vdi_group)
+            if not states:
+                continue
             allInfos.update({vdi_group:{'summary':states['summary']}})
             states.pop('summary')
             allInfos[vdi_group]['clone_vms'] = states
@@ -167,6 +169,8 @@ def get_clone_states(group_data,vdi_group)-> dict:
 
     clone_states = {}
     school_id = vdi_common.get_school_id(vdi_group)
+    if not school_id:
+        return
 
     ####### Get collected JSON Info File to all VMs from Group #############
     devices = vdi_common.devices_loader(school_id)
@@ -296,7 +300,7 @@ def get_master_states(group_data,vdi_group) -> dict:
 
     master_states['basic'] = get_master_group_infos(devices, master_hostname)
     if not master_states['basic']:
-        return False
+        return
     master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group)
     master_states['basic']['hostname'] = master_hostname
     allApiInfos = {}

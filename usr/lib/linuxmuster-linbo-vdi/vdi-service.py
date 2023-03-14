@@ -12,7 +12,6 @@ import time
 import json
 import logging
 
-
 import createNewMaster
 import removeMaster
 import removeClone
@@ -47,6 +46,8 @@ def handle_master(group_data, vdi_group):
 
     # get masterStates
     master_states = get_master_states(group_data, vdi_group)
+    if not master_states:
+        return
     logger.info(f"[{vdi_group}] Master States Summary for group")
     logger.debug(json.dumps(master_states['summary'], indent=2))
     # if no Master available
@@ -117,6 +118,9 @@ def handle_master(group_data, vdi_group):
 def handle_clones(group_data, vdi_group):
     # for group in vdiGroups:
     master_states = get_master_states(group_data, vdi_group)
+    if not master_states:
+        logger.warning(f"[{vdi_group}] No master states for this host, probably no entry in devices.csv")
+        return
     finished_masters = ((int(master_states['summary']['existing_master']) - int(
         master_states['summary']['building_master'])))
     if finished_masters >= 1:

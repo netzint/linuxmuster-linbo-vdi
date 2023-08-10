@@ -50,6 +50,7 @@ def handle_master(group_data, vdi_group):
         return
     logger.info(f"[{vdi_group}] Master States Summary for group")
     logger.debug(json.dumps(master_states['summary'], indent=2))
+    
     # if no Master available
     if master_states['summary']['existing_master'] == 0:
         logger.info(f"[{vdi_group}] Building new Master")
@@ -215,11 +216,13 @@ def run_service():
             "********************************************************")
         while not vdi_common.check_connection():
             vdi_common.check_connection()
+        
         #active_vdi_groups = vdi_common.getActivatedVdiGroups(getVDIGroups())
         vdi_groups = vdi_common.get_vdi_groups()
 
         while len(vdi_groups['general']['active_groups']) == 0:
-            logger.info("***** No active VDI Groups available! *****")
+            logger.info("No active VDI Groups available!")
+
             time.sleep(5)
             vdi_groups = vdi_common.get_vdi_groups()
 

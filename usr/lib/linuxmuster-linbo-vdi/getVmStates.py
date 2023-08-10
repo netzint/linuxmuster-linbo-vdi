@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 
-######## merges all vm infos to one JSON and returns it with vmid ########
+## merges all vm infos to one JSON and returns it with vmid
 def mergeInfos(vmid, apiInfos, groupInfos):
     jsonObject = {}
     apiInfos.update(groupInfos)
     jsonObject[vmid] = apiInfos
     return jsonObject 
 
-######## returns dict devicesInfos from devices list  ########
+## returns dict devicesInfos from devices list 
 def get_vm_group_infos(devices, vmid)-> dict:
     devicesInfos = {}
     for device in devices:
@@ -116,7 +116,7 @@ def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
         return None
 
 
-####### CLONES: ########
+#### Clones
 
 def get_all_states(vm_type)-> dict:
     if vm_type not in ['clone', 'master']:
@@ -282,7 +282,7 @@ def get_vm_info_multithreaded(vmids,node,vdi_group,vm_type)-> dict:
     pool.join()
     return data
 
-####### MASTER: #######
+#### MASTER
 def get_master_states(group_data,vdi_group) -> dict:
 
     vdi_common.check_connection()
@@ -291,6 +291,7 @@ def get_master_states(group_data,vdi_group) -> dict:
 
     schoolId = vdi_common.get_school_id(vdi_group)
     devices=vdi_common.devices_loader(schoolId)
+    
     ####### Get collected JSON Info File to all VMs from Group #############
     master_vmids = group_data['vmids']
     master_hostname = group_data['hostname']
@@ -343,7 +344,7 @@ def get_master_states(group_data,vdi_group) -> dict:
 if __name__ == "__main__":
     logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.ERROR)
 
-    parser = argparse.ArgumentParser(description='getVmStats.py ')
+    parser = argparse.ArgumentParser(description='getVmStats.py')
     quiet = False
     parser.add_argument('-v', dest='version', action='store_true', help='print the version and exit')
     parser.add_argument('-m', '-master', dest='master', action='store_true', help='run as master')

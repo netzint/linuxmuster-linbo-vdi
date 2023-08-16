@@ -1,6 +1,8 @@
 class VDIGroup:
     def __init__(self, name, data):
         self.name = name
-        self.data = data
-        self.activated = self.data.get('activated', False)
+        #self.data = data
+        for k,v in data.items():
+            setattr(self, k, v)
+
 

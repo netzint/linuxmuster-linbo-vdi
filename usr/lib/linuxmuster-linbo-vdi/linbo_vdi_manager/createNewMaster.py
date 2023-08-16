@@ -18,6 +18,8 @@ from globalValues import node, multischool, proxmox, nmapPorts, vdiLocalService
 # from globalValues import getMasterDetailsgetFileContent, getSchoolId
 if vdiLocalService == False:
     from globalValues import ssh
+from vdi_master import VDIMaster
+
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +244,7 @@ def wait_for_status_stopped(proxmox, timeout, node, vmid, vdi_group):
     return False
 
 
-def create_master(group_data, vdi_group):
+def create_master(group_data, vdi_group): 
     logger.info(f"[{vdi_group}] Creating new Master...")
 
     school_id = vdi_common.get_school_id(vdi_group)

@@ -9,7 +9,8 @@ import configparser
 import time
 import subprocess
 import paramiko
-from linbo_vdi_manager.vdi_group import VDIGroup
+from vdi_group import VDIGroup
+from vdi_master import VDIMaster
 
 from globalValues import vdiLocalService, ssh, proxmox, node
 
@@ -124,18 +125,24 @@ def get_school_id(vdiGroup):
 
 
 def get_vdi_groups() -> list:
-    vdi_groups = {'general': {'active_groups': []}, 'groups': []}
-
+    vdi_groups = []
     for vdi_file in glob.glob("/srv/linbo/*.vdi"):
         data = json_loader(vdi_file)
         if data:
             vdi_group_name = vdi_file.split("/srv/linbo/start.conf.")[1].split('.vdi')[0]
             vdi_group = VDIGroup(vdi_group_name, data)
-            vdi_groups['groups'].append(vdi_group)
-            if vdi_group.activated:
-                vdi_groups['general']['active_groups'].append(vdi_group_name)
+            vdi_groups.append(vdi_group)
 
+    # Check if any VDI group is active
+    any_active = any(vdi_group.activated for vdi_group in vdi_groups)
+    if not any_active:
+        logger.info("No active VDI Groups available!")
+        time.sleep(5)
+        # Recursively call the function to get updated list of VDI groups
+        return get_vdi_groups()
+    
     return vdi_groups
+
 
 ####### get Collection of all VMs who are registered at school server #######
 def get_vmid_range(devices,vdi_group):

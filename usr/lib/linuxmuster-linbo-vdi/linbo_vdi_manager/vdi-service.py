@@ -224,24 +224,22 @@ def run_service():
 
         vdi_groups = vdi_common.get_vdi_groups()
 
-        while len(vdi_groups['general']['active_groups']) == 0:
-            logger.info("No active VDI Groups available!")
 
-            time.sleep(5)
-            vdi_groups = vdi_common.get_vdi_groups()
 
-        for vdi_group in vdi_groups['groups']:
-            if vdi_groups['groups'][vdi_group]['activated']:
+        # Write a function which checks if there is any object in die vdi_groups which is activated
+
+        for vdi_group in vdi_groups:
+            if vdi_group.activated:
                 try:
                     handle_master(vdi_groups['groups'][vdi_group], vdi_group)
                 except Exception as e:
                     logger.error("Master failed: " + str(e))
-        for vdi_group in vdi_groups['groups']:
-            if vdi_groups['groups'][vdi_group]['activated']:
                 try:
                     handle_clones(vdi_groups['groups'][vdi_group], vdi_group)
                 except Exception as e:
                     logger.error("Clone failed: " + str(e))
+
+
 
         ### delete deprecated connection files ###
         deleteDeprecatedFiles()

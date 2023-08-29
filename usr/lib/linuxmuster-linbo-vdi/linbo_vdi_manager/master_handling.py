@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 # returns dict with image infos
-def generate_master_description(group_data, vdi_group) -> dict:
+def generate_master_description(vdi_group) -> dict:
     image_values = {}
-    devicePath = "/srv/linbo/start.conf." + str(vdi_group)
+    devicePath = "/srv/linbo/start.conf." + str(vdi_group.name)
     startConf_data = vdi_common.start_conf_loader(devicePath)
     for os in startConf_data['os']:
         image_name = os['BaseImage']
@@ -40,25 +40,27 @@ def generate_master_description(group_data, vdi_group) -> dict:
     dateOfCreation = timestamp.strftime("%Y%m%d%H%M%S")  # => "20201102141556"
     image_values["dateOfCreation"] = dateOfCreation
     image_values["buildstate"] = "building"
-    image_values["group"] = group_data['group']
+    image_values["group"] = vdi_group.data['group']
 
-    logging.debug(f"[{vdi_group}] {image_values}")
+    logging.debug(f"[{vdi_group.name}] {image_values}")
     return image_values
 
 
 # get alls VMIDs and checks returns first which doesnt exist on hv (no delete from oldest)
-def get_available_vmid(masterNode, group_data, vdi_group) -> int:
-    vmids = group_data['vmids']
+def get_available_vmid(masterNode, devices, vdi_group) -> int:
 
-    for vmid in vmids:
+    for vmid in vdi_group.data['vmids']:
         try:
             if proxmox.nodes(masterNode).qemu(vmid).status.get() != "":
                 logger.info(f"[{vdi_group}]Existing: {str(vmid)}")
         except Exception:
             logger.info(
-                f"[{vdi_group}] Available VMID found for Master: {str(vmid)}")
-            return vmid
-    logger.info(f"[{vdi_group}] No VMID available .. aborting")
+                f"[{vdi_group.name}] Available VMID found for Master: {str(vmid)}")
+            if check_configured_group_for_vmid(vmid, devices, vdi_group):
+                return vmid
+            else:
+                logger.warning(f"[{vdi_group.name}] Warning, host {vmid} is not configured for group {vdi_group.name}")
+    logger.info(f"[{vdi_group.name}] No VMID available .. aborting")
     return False
 
 
@@ -70,6 +72,7 @@ def get_master_device_info(devices, master_mac) -> dict:
 
 
 def send_linbo_remote_command(school_id, master_ip, vdi_group):
+    # TODO check if configured group in vdi config is also configured in devices
     try:
         command = "linbo-remote"
         if school_id != 'default-school':
@@ -88,14 +91,14 @@ def validate_mac(x):
     else:
         return 0
 
-def check_vm_parameters(parameters):
+def check_vm_parameters(parameters,vdi_group):
     storage_repos = proxmox.nodes(parameters["masterNode"]).storage.get()
     storage_repo_names = []
     for storage in storage_repos:
         storage_repo_names.append(storage['storage'])
 
-    if parameters['newContainer']['storage'] not in storage_repo_names:
-        raise ValueError(f"Configured storage {parameters['newContainer']['storage']} is not available on {parameters['masterNode']}")
+    if parameters['vm_configuration']['storage'] not in storage_repo_names:
+        raise ValueError(f"Configured storage {parameters['vm_configuration']['storage']} is not available on {parameters['masterNode']}")
     return True
 
 def create_vm(parameters, vdi_group):
@@ -106,11 +109,14 @@ def create_vm(parameters, vdi_group):
 
     # check vm parameters before creating
     if check_vm_parameters(parameters,vdi_group):
-
-        proxmox.nodes(
-            parameters["masterNode"]).qemu.create(**parameters["newContainer"])
-        logger.info(
-            f"[{vdi_group}] Master-VM with {str(parameters['newContainer']['vmid'])} is being created")
+        vm_config = proxmox.nodes(parameters["masterNode"]).qemu(7101).config.get()
+        for c in vm_config:
+            print (f"{c}: {vm_config[c]}")
+        for c in parameters["vm_configuration"]:
+            print (f'{c}: {str(parameters["vm_configuration"][c])}')
+        proxmox.nodes(parameters["masterNode"]).qemu.create(**parameters["vm_configuration"])
+        
+        logger.info(f"[{vdi_group}] Master-VM with {str(parameters['vm_configuration']['vmid'])} is being created")
         return
 
 
@@ -238,65 +244,76 @@ def wait_for_status_stopped(proxmox, timeout, node, vmid, vdi_group):
             logger.info(f"[{vdi_group}] VM " + str(vmid) + " stopped.")
             return True
         else:
-            logger.info(f"[{vdi_group}] waiting VM to going down...")
+            logger.info(f"[{vdi_group}] Wait vor VM {vmid} to shutdown")
             time.sleep(5)
-    logger.info(f"[{vdi_group}] ERROR: VM couldn't get going down.")
+    logger.error(f"[{vdi_group}] ERROR: Could not shutdown VM {vmid} ")
     return False
 
+def check_configured_group_for_vmid(master_vmid, devices, vdi_group):
+    # get sure configured group in devices is also configured in vdi config
+    for device in devices:
+        if device[11] == master_vmid:
+            if device[2] == vdi_group:      
+                return True
+            else:
+                return False
 
-def create_master(group_data, vdi_group): 
-    logger.info(f"[{vdi_group}] Creating new Master...")
-
-    school_id = vdi_common.get_school_id(vdi_group)
+def create_master(vdi_group) -> bool: 
+    logger.info(f"[{vdi_group.name}] Creating new Master...")
+    school_id = vdi_common.get_school_id(vdi_group.name)
     devices = vdi_common.devices_loader(school_id)
 
+
     master_node = node
-    master_vmid = get_available_vmid(master_node, group_data, vdi_group)
+    master_vmid = get_available_vmid(master_node, devices, vdi_group)
     if not master_vmid:
-        logger.error(f"[{vdi_group}] Error, no Master VM available")
+        logger.error(f"[{vdi_group.name}] Error, no Master VM available")
         return False
+    
+
+
 
     masterNet0 = "bridge=" + \
-        group_data['bridge'] + ",virtio=" + group_data['mac']
-    if 'tag' in group_data and group_data['tag'] != 0:
-        masterNet0 += ",tag="+str(group_data['tag'])
+        vdi_group.data['bridge'] + ",virtio=" + vdi_group.data['mac']
+    if 'tag' in vdi_group.data and vdi_group.data['tag'] != 0:
+        masterNet0 += ",tag="+str(vdi_group.data['tag'])
 
-    timeout = group_data['timeout_building_master']
-    master_description = generate_master_description(group_data, vdi_group)
+    timeout = vdi_group.data['timeout_building_master']
+    master_description = generate_master_description(vdi_group)
 
-    master_device_info = get_master_device_info(devices, group_data['mac'])
-
-
+    master_device_info = get_master_device_info(devices, vdi_group.data['mac'])
+    # TODO Fix this to work with uefi
+    # TODO improve whole config process
     parameters = {
         "masterNode": master_node,
-        "masterMac": group_data['mac'],
-        "newContainer": {
-            'name': group_data['name'],
+        "masterMac": vdi_group.data['mac'],
+        "vm_configuration": {
+            'name': vdi_group.data['name'],
             'vmid': master_vmid,
             # 'pool' : masterPool,
             'description': json.dumps(master_description),
-            'bios': group_data['bios'],
-            'boot': group_data['boot'],
+            'bios': vdi_group.data['bios'],
+            #'boot': group_data['boot'],
             # 'bootdisk': group_data['bootdisk'],
-            'cores': group_data['cores'],
-            'ostype': group_data['ostype'],
-            'memory': group_data['memory'],
-            'storage': group_data['storage'],
-            'scsihw': group_data['scsihw'],
-            'sata0': f"{group_data['storage']}:{str(group_data['size'])},format={group_data['format']}",
+            'cores': vdi_group.data['cores'],
+            'ostype': vdi_group.data['ostype'],
+            'memory': vdi_group.data['memory'],
+            'storage': vdi_group.data['storage'],
+            #'scsihw': group_data['scsihw'],
+            'sata0': f"{vdi_group.data['storage']}:{str(vdi_group.data['size'])},format={vdi_group.data['format']}",
             # 'scsi0': masterScsi0,
             'net0': masterNet0,
-            'vga': group_data['display'],
-            'audio0': group_data['audio'],
-            'usb0': group_data['usb0'],
-            'spice_enhancements': group_data['spice_enhancements']
+            'vga': vdi_group.data['display'],
+            'audio0': vdi_group.data['audio'],
+            'usb0': vdi_group.data['usb0'],
+            'spice_enhancements': vdi_group.data['spice_enhancements']
         }
     }
 
     try:
         create_vm(parameters, vdi_group)
-    except:
-        logger.error(f"[{vdi_group}] Could not create vm")
+    except Exception as err:
+        logger.error(f"[{vdi_group}] Could not create vm, {err}")
         return False
 
     # and set linbo-bittorrent restart??
@@ -325,6 +342,8 @@ def create_master(group_data, vdi_group):
         logger.info(f"[{vdi_group}] Creating new Template for group failed.")
         logger.info(f"[{vdi_group}] Failed Master is getting removed")
         delete_failed_master(master_vmid, vdi_group)
+    return True
+    
 
 
 if __name__ == "__main__":

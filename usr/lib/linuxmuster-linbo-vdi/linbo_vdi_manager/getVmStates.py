@@ -14,6 +14,8 @@ from globalValues import node,proxmox,timeoutConnectionRequest
 import vdi_common
 import argparse
 import logging
+from vdi_master import VDIMaster
+
 
 from multiprocessing.pool import ThreadPool
 __version__ = 'version 0.9.9'
@@ -62,6 +64,12 @@ def get_master_group_infos(devices, master_hostname)-> dict:
         logger.warning(f"Could not find master_hostname in devices")
         return False
 
+def vm_exists(vm_list, target_vmid):
+    for vm in vm_list:
+        if str(vm['vmid']) == target_vmid:
+            return True
+    return False
+
 ## get information from existing VMs  
 def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
     """ Returns all information provided by hv API including description dict
@@ -71,12 +79,18 @@ def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
     :param vdi_group: str
     :rtype dict
     """
+    # Retrieve a list of existing VMs
     try:
-        vm_api_infos = proxmox.nodes(node).qemu(vm_id).config.get()
+        vm_list = proxmox.nodes(node).qemu.get()
     except Exception as err:
-        if err.status_code == 500 and 'does not exist' in err.content:
-            logging.info(f"[{vdi_group}] VM {vm_id} does not exist on {node}")
+        print(f"Error retrieving existing VMs: {err}")
         return None
+    if not vm_exists(vm_list, vm_id):
+        logging.info(f"[{vdi_group}] VM {vm_id} does not exist on {node}")
+        return None
+
+    vm_api_infos = proxmox.nodes(node).qemu(vm_id).config.get()
+
 
     try:
         response = proxmox.nodes(node).qemu(vm_id).status.current.get()
@@ -266,13 +280,13 @@ def get_needed_imagesize(vdiGroup):
     return imageInfo['imagesize']
 
 
-def get_vm_info_multithreaded(vmids,node,vdi_group,vm_type)-> dict:
+def get_vm_info_multithreaded(vdi_group,vm_type)-> dict:
     # define Thread pool
     pool = ThreadPool(processes=5)
     processes = []
     data = {}
-    for vmid in vmids:
-        processes.append(pool.apply_async(func=get_vm_info_by_api, args=(node,vmid,vdi_group,vm_type,)))
+    for vmid in vdi_group.data['vmids']:
+        processes.append(pool.apply_async(func=get_vm_info_by_api, args=(node,vmid,vdi_group.name,vm_type,)))
     for process in processes:
         returnValue = process.get()
         if returnValue:
@@ -283,33 +297,27 @@ def get_vm_info_multithreaded(vmids,node,vdi_group,vm_type)-> dict:
     return data
 
 #### MASTER
-def get_master_states(group_data,vdi_group) -> dict:
+def get_master_states(vdi_group) -> dict:
 
     vdi_common.check_connection()
 
     master_states = {}
 
-    schoolId = vdi_common.get_school_id(vdi_group)
-    devices=vdi_common.devices_loader(schoolId)
+    #schoolId = vdi_common.get_school_id(vdi_group.name)
+    #devices=vdi_common.devices_loader(schoolId)
     
     ####### Get collected JSON Info File to all VMs from Group #############
-    master_vmids = group_data['vmids']
-    master_hostname = group_data['hostname']
-    logger.info(f"[{vdi_group}] ID Range for imagegroup")
-    logger.info(f"[{vdi_group}] {master_vmids}" )
+    master_vmids = vdi_group.data['vmids']
+    master_hostname = vdi_group.data['hostname']
+    logger.info(f"[{vdi_group.name}] ID Range for imagegroup")
+    logger.info(f"[{vdi_group.name}] {master_vmids}" )
 
 
-    master_states['basic'] = get_master_group_infos(devices, master_hostname)
-    if not master_states['basic']:
-        return
-    master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group)
-    master_states['basic']['hostname'] = master_hostname
-    allApiInfos = {}
-    #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
-    ####### get api Infos #######
+    #allApiInfos = {}
+    allApiInfos = get_vm_info_multithreaded(vdi_group, 'master')
 
-    allApiInfos = get_vm_info_multithreaded(master_vmids,node,vdi_group,'master')
-    master_states.update(allApiInfos)
+    #master_states.update(allApiInfos)
+    
     # summary
     master_states['summary'] = {
         'existing_master'     : 0,
@@ -318,6 +326,21 @@ def get_master_states(group_data,vdi_group) -> dict:
         'failed_master': 0,
         'finished'     : 0,
     }
+
+    #master = VDIMaster(vdi_group)
+    #master.get_master_group_infos()
+
+    ##master_states['basic'] = get_master_group_infos(devices, master_hostname)
+    #if not master_states['basic']:
+    #    return 
+    #master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group.name)
+    #master_states['basic']['hostname'] = master_hostname
+    #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
+    
+    
+    ####### get api Infos #######
+
+
     
     for vmid in allApiInfos:
         # calculate existing
@@ -337,7 +360,7 @@ def get_master_states(group_data,vdi_group) -> dict:
         except Exception:
             pass
     
-    master_states['current_master']=vdi_common.get_current_master(master_states, master_vmids, vdi_group)
+    #master_states['current_master']=vdi_common.get_current_master(master_states, master_vmids, vdi_group.name)
     return master_states
 
 

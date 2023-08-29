@@ -10,7 +10,6 @@ import time
 import subprocess
 import paramiko
 from vdi_group import VDIGroup
-from vdi_master import VDIMaster
 
 from globalValues import vdiLocalService, ssh, proxmox, node
 
@@ -130,6 +129,7 @@ def get_vdi_groups() -> list:
         data = json_loader(vdi_file)
         if data:
             vdi_group_name = vdi_file.split("/srv/linbo/start.conf.")[1].split('.vdi')[0]
+            data["group"] = vdi_group_name
             vdi_group = VDIGroup(vdi_group_name, data)
             vdi_groups.append(vdi_group)
 
@@ -140,7 +140,6 @@ def get_vdi_groups() -> list:
         time.sleep(5)
         # Recursively call the function to get updated list of VDI groups
         return get_vdi_groups()
-    
     return vdi_groups
 
 

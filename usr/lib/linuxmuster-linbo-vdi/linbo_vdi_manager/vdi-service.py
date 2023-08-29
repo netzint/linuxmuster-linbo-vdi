@@ -12,7 +12,7 @@ import time
 import json
 import logging
 
-import createNewMaster
+import master_handling as master_handling
 import removeMaster
 import removeClone
 import buildClone
@@ -20,6 +20,7 @@ from getVmStates import get_master_states, get_clone_states
 from deleteConnectionFiles import deleteDeprecatedFiles
 import vdi_common
 from datetime import datetime
+
 
 #logging.basicConfig(format='%(levelname)s:%(asctime)s %(message)s', level=logging.INFO)
 level = "INFO"
@@ -41,31 +42,35 @@ if level == "ERROR":
 
 logger = logging.getLogger(__name__)
 
-
-def handle_master(group_data, vdi_group):
-
+def handle_master(vdi_group):
+    
     # for group in vdiGroups:
-    logger.info(f"[{vdi_group}] Group Data")
-    logger.debug(json.dumps(group_data, indent=2))
+    logger.debug(f"[{vdi_group.name}] Group Data")
+    logger.debug(json.dumps(vdi_group.data, indent=2))
 
     # get masterStates
-    master_states = get_master_states(group_data, vdi_group)
+    master_states = vdi_group.get_master_states()
+    
     if not master_states:
         return
-    logger.info(f"[{vdi_group}] Master States Summary for group")
+
+    logger.info(f"[{vdi_group.name}] Master States Summary for group")
     logger.debug(json.dumps(master_states['summary'], indent=2))
     
     # if no Master available
     if master_states['summary']['existing_master'] == 0:
-        logger.info(f"[{vdi_group}] Building new Master")
-        # createNewMaster.create_master(group_data,vdi_group)
+        logger.info(f"[{vdi_group.name}] Building new Master")
+
         for thread in threading.enumerate():
-            if thread.name == group_data['name']:
-                logger.info('Thread already running with name: %s' % group_data['name'])
+            if thread.name == "create_master_"+vdi_group.name:
+                logger.info('Thread already running with name: %s' % vdi_group.name)
                 return
+
         t = threading.Thread(
-            target=createNewMaster.create_master, args=(group_data, vdi_group,))
+            target=master_handling.create_master, args=(vdi_group,),name=f"create_master_{vdi_group.name}")
         t.start()
+
+
 
     # if 1 or more master, try delete one
     elif master_states['summary']['existing_master'] > 1:
@@ -73,15 +78,15 @@ def handle_master(group_data, vdi_group):
             f"[{vdi_group}] Try to find failed, building or deprecated masters to delete")
         # removeMaster.remove_master(group_data,vdi_group)
         t = threading.Thread(target=removeMaster.remove_master,
-                             args=(group_data, vdi_group,))
+                             args=(vdi_group.data, vdi_group.name,))
         t.start()
         # read masterDetails again after deleting one
         # so deleted master is not in existing list
-        master_states = get_master_states(group_data, vdi_group)
+        master_states = vdi_group.get_master_states()
     # if a master exist
     elif master_states['summary']['existing_master'] == 1:
         # get latest from existing mastervmids:
-        master_vmids = group_data['vmids']
+        master_vmids = vdi_group.data['vmids']
         existing_vmids = []
         timestampLatest, vmidLatest = 1, None
         for vmid in master_vmids:
@@ -110,11 +115,11 @@ def handle_master(group_data, vdi_group):
 
 
             for thread in threading.enumerate():
-                if thread.name == group_data['name']:
-                    logger.info('Thread already running with name: %s' % group_data['name'])
+                if thread.name == vdi_group.name:
+                    logger.info('Thread already running with name: %s' % vdi_group.name)
                     return
             t = threading.Thread(
-                target=createNewMaster.create_master, args=(group_data, vdi_group,))
+                target=master_handling.create_master, args=(vdi_group.data, vdi_group.name,))
             t.start()
 
         else:
@@ -122,10 +127,10 @@ def handle_master(group_data, vdi_group):
             attributes = ['bios', 'boot', 'cores', 'memory', 'ostype',
                           'name', 'scsihw', 'usb0', 'spice_enhancements']
             for attribute in attributes:
-                if not group_data[attribute] == master_states[vmidLatest][attribute]:
+                if not vdi_group.data[attribute] == master_states[vmidLatest][attribute]:
                     logger.info(
                         f"[{vdi_group}] Master Ressources {str(vmidLatest)} are not up to date, try building new master")
-                    createNewMaster.create_master(group_data, vdi_group)
+                    master_handling.create_master(vdi_group.data, vdi_group.name)
 
             logger.info(f"[{vdi_group}] Master Ressources " +
                         str(vmidLatest) + " are up to date")
@@ -231,13 +236,13 @@ def run_service():
         for vdi_group in vdi_groups:
             if vdi_group.activated:
                 try:
-                    handle_master(vdi_groups['groups'][vdi_group], vdi_group)
+                    handle_master(vdi_group)
                 except Exception as e:
                     logger.error("Master failed: " + str(e))
-                try:
-                    handle_clones(vdi_groups['groups'][vdi_group], vdi_group)
-                except Exception as e:
-                    logger.error("Clone failed: " + str(e))
+                #try:
+                #    handle_clones(vdi_groups['groups'][vdi_group], vdi_group)
+                #except Exception as e:
+                #    logger.error("Clone failed: " + str(e))
 
 
 

@@ -12,7 +12,7 @@ import time
 import argparse
 import logging
 from datetime import datetime
-from globalValues import node,proxmox,timeoutConnectionRequest
+from globalValues import proxmox_node,proxmox,timeoutConnectionRequest
 import vdi_common
 from getVmStates import get_clone_states
 
@@ -96,10 +96,10 @@ def wait_for_vm_to_stop(proxmox, timeout, node, vmid,vdi_group):
 
 def remove_vm(vmid):
     try:
-        if proxmox.nodes(node).qemu(vmid).status.current.get() != "stopped":
-            proxmox.nodes(node).qemu(vmid).status.stop.post()
+        if proxmox.nodes(proxmox_node).qemu(vmid).status.current.get() != "stopped":
+            proxmox.nodes(proxmox_node).qemu(vmid).status.stop.post()
             time.sleep(3)
-        proxmox.nodes(node).qemu(vmid).delete()
+        proxmox.nodes(proxmox_node).qemu(vmid).delete()
     except:
         return
 
@@ -148,7 +148,7 @@ def remove_every_clone(vdi_group):
     vdi_groups = vdi_common.get_vdi_groups()
     if vdi_group in vdi_groups:
         clone_states = get_clone_states(vdi_groups['groups'][vdi_group],vdi_group)
-        remove_vm(clone_states,node,vdi_group)
+        remove_vm(clone_states,proxmox_node,vdi_group)
 
 
 

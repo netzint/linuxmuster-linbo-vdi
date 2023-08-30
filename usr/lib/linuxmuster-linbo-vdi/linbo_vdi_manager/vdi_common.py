@@ -11,9 +11,24 @@ import subprocess
 import paramiko
 from vdi_group import VDIGroup
 
-from globalValues import vdiLocalService, ssh, proxmox, node
+from globalValues import vdiLocalService, ssh, proxmox, proxmox_node
 
 logger = logging.getLogger(__name__)
+
+
+def tuple_string_to_dict(tuple_string) -> dict:
+    '''
+    Converts a string of a tuple to a dictionary
+    :param tuple_string: String of a tuple
+    :return: Dictionary of the tuple
+    '''
+    tuples = tuple_string.split(',')
+
+    parsed_data = {}
+    for tuple_str in tuples:
+        key, value = tuple_str.split('=')
+        parsed_data[key] = value
+    return parsed_data
 
 
 def start_conf_loader(path_to_file)-> dict:
@@ -110,10 +125,10 @@ def getFileContent(path_to_file):
     else:
         logging.error(path_to_file + ' not a file')     
 
-def get_school_id(vdiGroup):
+def get_school_id(vdiGroup_name):
     try:
         parser = configparser.ConfigParser(strict=False)
-        linboGroupConfigPath = "/srv/linbo/start.conf." + str(vdiGroup)
+        linboGroupConfigPath = "/srv/linbo/start.conf." + str(vdiGroup_name)
         parser.read(linboGroupConfigPath)
         schoolId = parser['LINBO']['School']      
         return schoolId
@@ -179,7 +194,7 @@ def check_server_connection():
 # check hv connection
 def check_node_connection():
     try:
-        proxmox.nodes(node).status.get()
+        proxmox.nodes(proxmox_node).status.get()
         return True
     except Exception as err:
         logging.error("*** Connection to Node failed! ***")
@@ -203,22 +218,7 @@ def check_connection():
     time.sleep(5)
     return False
 
-# calculates latest master and returns VMID
-def get_current_master(master_states, master_vmids, vdi_group):
-    timestampLatest = 0
-    vmidLatest = 0
-    logging.debug(f"[{vdi_group}] All master vmids: {master_vmids}")
-    
-    
-    for vmid in master_vmids:
-        if vmid in master_states:
-            timestamp = master_states[vmid]['dateOfCreation']
-            if float(timestamp) >= float(timestampLatest):
-                timestampLatest = timestamp
-                vmidLatest = vmid
 
-    logging.info(f"[{vdi_group}] current master vmid is {vmidLatest}, timestamp: {str(timestampLatest)}")
-    return {'vmid':vmidLatest,'timestamp':timestampLatest}
 
 
 ###### returns dict{} loggedIn{user : { ip : ip, domain : domain}

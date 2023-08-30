@@ -54,18 +54,18 @@ def handle_master(vdi_group):
     if not master_states:
         return
 
-    logger.info(f"[{vdi_group.name}] Master States Summary for group")
+    logger.debug(f"[{vdi_group.name}] Master States Summary for group")
     logger.debug(json.dumps(master_states['summary'], indent=2))
     
     # if no Master available
     if master_states['summary']['existing_master'] == 0:
-        logger.info(f"[{vdi_group.name}] Building new Master")
+        logger.info(f"[{vdi_group.name}]No existing master, building new Master")
 
+        # TODO make this a function and use it again
         for thread in threading.enumerate():
             if thread.name == "create_master_"+vdi_group.name:
                 logger.info('Thread already running with name: %s' % vdi_group.name)
                 return
-
         t = threading.Thread(
             target=master_handling.create_master, args=(vdi_group,),name=f"create_master_{vdi_group.name}")
         t.start()
@@ -80,16 +80,16 @@ def handle_master(vdi_group):
         t = threading.Thread(target=removeMaster.remove_master,
                              args=(vdi_group.data, vdi_group.name,))
         t.start()
-        # read masterDetails again after deleting one
-        # so deleted master is not in existing list
+
+        # read masterDetails again after deleting one so deleted master is not in existing list
         master_states = vdi_group.get_master_states()
+
     # if a master exist
     elif master_states['summary']['existing_master'] == 1:
         # get latest from existing mastervmids:
-        master_vmids = vdi_group.data['vmids']
         existing_vmids = []
         timestampLatest, vmidLatest = 1, None
-        for vmid in master_vmids:
+        for vmid in vdi_group.data['vmids']:
             if vmid in master_states:
                 if master_states[vmid] is not None:
                     existing_vmids.append(vmid)
@@ -99,41 +99,50 @@ def handle_master(vdi_group):
                             vmidLatest = vmid
         if vmidLatest is None:
             logger.info(
-                "[{vdi_group}] Theres no finished or building actual Master")
+                f"[{vdi_group.name}] Theres no finished or building actual Master")
         logger.debug(
-            f"[{vdi_group}] Existing Master(s): {str(existing_vmids)}")
-        logger.debug(f"[{vdi_group}] Latest Master: {str(vmidLatest)}")
-        if master_states[vmidLatest]['buildstate'] == "building":
-            logger.info(f"[{vdi_group}] Master is building")
-        # check if master image is up 2 date
-        if not master_states['basic']['actual_imagesize'] == master_states[vmidLatest]['imagesize']:
-            logger.debug(
-                f"[{vdi_group}] Current imagesize {str(master_states[vmidLatest]['imagesize'])} does not match current image: {str(master_states['basic']['actual_imagesize'])}")
-            logger.debug(
-                f"[{vdi_group}] Master Image is not up-to-date => creating new Master")
-            # createNewMaster.create_master(group_data,vdi_group)
+            f"[{vdi_group.name}] Existing Master(s): {str(existing_vmids)}")
+        logger.debug(f"[{vdi_group.name}] Latest Master: {str(vmidLatest)}")
 
+        if master_states['current_master'].buildstate == "building":
+            # TODO: check if master is building for too long
+            logger.info(f"[{vdi_group.name}] Master is building")
+            terminate = int(master_states['current_master'].date_of_creation) + vdi_group.data['timeout_building_master']
+            if time.time() < terminate:
+                master_states['current_master'].delete_master()
+                master_states = vdi_group.get_master_states()
 
+        
+        # check if master image is up-to-date
+        if not master_states['current_master'].actual_imagesize == master_states['current_master'].needed_imagesize:
+            logger.debug(
+                f"[{vdi_group.name}] Current imagesize {str(master_states['current_master'].actual_imagesize)} does not match current image: {str(master_states['current_master'].needed_imagesize)}")
+            logger.debug(
+                f"[{vdi_group.name}] Master Image is not up-to-date => creating new Master")
+
+            # TODO make this a function and use it again
             for thread in threading.enumerate():
-                if thread.name == vdi_group.name:
+                if thread.name == "create_master_"+vdi_group.name:
                     logger.info('Thread already running with name: %s' % vdi_group.name)
                     return
             t = threading.Thread(
-                target=master_handling.create_master, args=(vdi_group.data, vdi_group.name,))
+                target=master_handling.create_master, args=(vdi_group,),name=f"create_master_{vdi_group.name}")
             t.start()
 
+        # image in master is up-to-date, check hardware attributes
         else:
             # check if hv hardware and options changed
-            attributes = ['bios', 'boot', 'cores', 'memory', 'ostype',
-                          'name', 'scsihw', 'usb0', 'spice_enhancements']
-            for attribute in attributes:
-                if not vdi_group.data[attribute] == master_states[vmidLatest][attribute]:
+            vm_attributes = ['bios','cores','memory','ostype','name','usb0','spice_enhancements','bridge','tag','storage','size']
+
+
+            for attribute in vm_attributes:
+                if not vdi_group.data[attribute] == master_states['current_master'].attributes[attribute]:
                     logger.info(
-                        f"[{vdi_group}] Master Ressources {str(vmidLatest)} are not up to date, try building new master")
+                        f"[{vdi_group.name}] Master Ressources {str(vmidLatest)} are not up to date, {attribute} changed! Try building new master")
                     master_handling.create_master(vdi_group.data, vdi_group.name)
 
-            logger.info(f"[{vdi_group}] Master Ressources " +
-                        str(vmidLatest) + " are up to date")
+            logger.info(f"[{vdi_group.name}] Master Ressources " +
+                        str(master_states['current_master'].vmid) + " are up to date")
 
 
 def handle_clones(group_data, vdi_group):
@@ -235,10 +244,11 @@ def run_service():
 
         for vdi_group in vdi_groups:
             if vdi_group.activated:
-                try:
-                    handle_master(vdi_group)
-                except Exception as e:
-                    logger.error("Master failed: " + str(e))
+                handle_master(vdi_group)
+                #try:
+                #    handle_master(vdi_group)
+                #except Exception as e:
+                #    logger.error("Master failed: " + str(e))
                 #try:
                 #    handle_clones(vdi_groups['groups'][vdi_group], vdi_group)
                 #except Exception as e:
@@ -248,7 +258,7 @@ def run_service():
 
         ### delete deprecated connection files ###
         deleteDeprecatedFiles()
-        time.sleep(2)
+        time.sleep(5) # waiting 5 seconds is good for handling masters, otherwise a created vm could not have a description yet
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import json
 # from proxmoxer import ProxmoxAPI
 import logging
 import vdi_common
-from globalValues import node, multischool, proxmox, nmapPorts, vdiLocalService
+from globalValues import proxmox_node, multischool, proxmox, nmapPorts, vdiLocalService
 # from globalValues import getMasterDetailsgetFileContent, getSchoolId
 if vdiLocalService == False:
     from globalValues import ssh
@@ -72,17 +72,16 @@ def get_master_device_info(devices, master_mac) -> dict:
 
 
 def send_linbo_remote_command(school_id, master_ip, vdi_group):
-    # TODO check if configured group in vdi config is also configured in devices
     try:
         command = "linbo-remote"
         if school_id != 'default-school':
             command += f" -s {school_id}"
         command += f" -i {master_ip} -p partition,format,initcache:rsync,sync:1,start:1"
-        logging.info(f"[{vdi_group}] Send linbo remote command to {master_ip}")
+        logging.info(f"[{vdi_group.name}] Send linbo remote command to {master_ip}")
         print(command)
         vdi_common.run_command(command)
     except Exception as err:
-        logger.info(f"[{vdi_group}] SSH Problem ({err})")
+        logger.info(f"[{vdi_group.name}] SSH Problem ({err})")
 
 
 def validate_mac(x):
@@ -91,7 +90,7 @@ def validate_mac(x):
     else:
         return 0
 
-def check_vm_parameters(parameters,vdi_group):
+def check_vm_parameters(parameters):
     storage_repos = proxmox.nodes(parameters["masterNode"]).storage.get()
     storage_repo_names = []
     for storage in storage_repos:
@@ -108,7 +107,7 @@ def create_vm(parameters, vdi_group):
         logger.debug(f"[{vdi_group}] Mac address is malformed")
 
     # check vm parameters before creating
-    if check_vm_parameters(parameters,vdi_group):
+    if check_vm_parameters(parameters):
         vm_config = proxmox.nodes(parameters["masterNode"]).qemu(7101).config.get()
         for c in vm_config:
             print (f"{c}: {vm_config[c]}")
@@ -116,42 +115,41 @@ def create_vm(parameters, vdi_group):
             print (f'{c}: {str(parameters["vm_configuration"][c])}')
         proxmox.nodes(parameters["masterNode"]).qemu.create(**parameters["vm_configuration"])
         
-        logger.info(f"[{vdi_group}] Master-VM with {str(parameters['vm_configuration']['vmid'])} is being created")
+        logger.info(f"[{vdi_group.name}] Master-VM with {str(parameters['vm_configuration']['vmid'])} is being created")
         return
 
 
 def start_preparing_vm(masterNode, masterVmid, vdi_group):
     try:
         proxmox.nodes(masterNode).qemu(masterVmid).status.start.post()
-        if preparing_vm_watchdog(proxmox, 100, masterNode, masterVmid):
-            print(f"[{vdi_group}] VM {str(masterVmid)}" +
+        if preparing_vm_watchdog(proxmox, 100, masterNode, masterVmid, vdi_group):
+            print(f"[{vdi_group.name}] VM {str(masterVmid)}" +
                   " started and getting prepared by LINBO")
         return True
     except Exception as err:
-        logger.info(f"[{vdi_group}] Failed to start Master VM")
+        logger.info(f"[{vdi_group.name}] Failed to start Master VM")
         logger.info(err)
-        logger.info(f"[{vdi_group}] Failed Master is getting removed")
+        logger.info(f"[{vdi_group.name}] Failed Master is getting removed")
         delete_failed_master(masterVmid)
 
 
-def preparing_vm_watchdog(proxmox, timeout, node, vmid):
+def preparing_vm_watchdog(proxmox, timeout, node, vmid, vdi_group):
     terminate = time.time() + timeout
     while time.time() < terminate:
         status = proxmox.nodes(node).qemu(vmid).status.current.get()
         status = status['qmpstatus']
         if status == "running":
-            print("*** VM is running ***")
+            logger.debug(f"[{vdi_group.name}] VM {vmid} is running")
             return True
         time.sleep(2)
         logger.info(status)
-        logger.info(
-            "*** running and waiting for VM to get prepared by LINBO and boot ... ***"
+        logger.info(f"[{vdi_group.name}] running and waiting for VM to get prepared by LINBO and boot ..."
         )
     return False
 
 
-def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
-    check = preparing_vm_watchdog(proxmox, 15, masterNode, masterVmid)
+def checkNmap(masterNode, timeout, masterVmid, masterIP, ports, vdi_group):
+    check = preparing_vm_watchdog(proxmox, 15, masterNode, masterVmid, vdi_group)
     if check == True:
         startTime = time.time()
         logger.info("Starttime: " + str(startTime))
@@ -159,17 +157,17 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
         # terminate = startTime + timedelta(seconds=timeout)
         logger.info("Ende " + str(terminate))
 
-        logger.info("*** Scanning for open ports on " +
-                    str(masterVmid) + "***")
+        logger.debug(f"[{vdi_group.name}] Scanning for open ports on {str(masterVmid)}")
         scanner = nmap.PortScanner()
 
         windows_ports = {"RPC": "135", "SMB": "445", "SVCHOST": "49665"}
         linux_ports = {"SSH": "22"}
+    
         while time.time() < terminate:
             # checkedTime = time.time() - (terminate - time.time())
             checkedTime = int(time.time() - startTime)
-            logger.info("*** Waiting for " + str(masterVmid) + " to be synced, waited: " + str(checkedTime) + "s of " +
-                        str(timeout) + "s timeout frame ***")
+            logger.info(f"[{vdi_group.name}] Waiting for {str(masterVmid)} to be synced, waited: {str(checkedTime)}s of " +
+                        f"{str(timeout)}s timeout frame")
             for port in windows_ports:
                 try:
                     portscan = scanner.scan(masterIP, windows_ports[port])
@@ -177,8 +175,8 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
                         windows_ports[port])]['state']
                     logger.debug("Port " + port + " : " + status)
                     if status == "open":
-                        logger.info("*** Windows boot check on " +
-                                    str(masterVmid) + " succesfully, found open port ***")
+                        logger.info(f"[{vdi_group.name}] Windows boot check on " +
+                                    f"{str(masterVmid)} succesfully, found open port")
                         return True
                 except KeyError as err:
                     continue
@@ -190,31 +188,31 @@ def checkNmap(masterNode, timeout, masterVmid, masterIP, ports):
                         linux_ports[port])]['state']
                     logger.debug("Port " + port + " : " + status)
                     if status == "open":
-                        logger.info("*** Linux boot check on " +
-                                    str(masterVmid) + " succesfully, found open port ***")
+                        logger.info(f"[{vdi_group.name}] Linux boot check on " +
+                                    f"{str(masterVmid)} succesfully, found open port")
                         return True
                 except KeyError as err:
                     continue
                     # logger.info("*** Master seems not ready yet, no open ports found ***")
                     # logger.info(err)
-            logger.info("*** Master " + str(masterVmid) +
-                        " seems not ready yet, no open ports found ***")
+            logger.info(f"[{vdi_group.name}] Master " + str(masterVmid) +
+                        " seems not ready yet, no open ports found")
             time.sleep(5)
     else:
-        logger.info("*** VM State is powered off, not going to check ports***")
+        logger.info(f"[{vdi_group.name}] {str(masterVmid)} VM State is powered off, not going to check ports")
         return False
 
 
 def delete_failed_master(masterVmid, vdi_group):
     try:
-        status = proxmox.nodes(node).qemu(masterVmid).status.current.get()
+        status = proxmox.nodes(proxmox_node).qemu(masterVmid).status.current.get()
         status = status['qmpstatus']
         if status == "running":
-            proxmox.nodes(node).qemu(masterVmid).status.stop.post()
+            proxmox.nodes(proxmox_node).qemu(masterVmid).status.stop.post()
             logger.info(f"[{vdi_group}] Failed Master " + str(masterVmid) +
                         " is getting stopped.")
-            if wait_for_status_stopped(proxmox, 20, node, masterVmid) == True:
-                proxmox.nodes(node).qemu(masterVmid).delete()
+            if wait_for_status_stopped(proxmox, 20, proxmox_node, masterVmid) == True:
+                proxmox.nodes(proxmox_node).qemu(masterVmid).delete()
                 logger.info(f"[{vdi_group}] deleted VM: " + str(masterVmid))
                 return
     except Exception as err:
@@ -250,10 +248,13 @@ def wait_for_status_stopped(proxmox, timeout, node, vmid, vdi_group):
     return False
 
 def check_configured_group_for_vmid(master_vmid, devices, vdi_group):
+    '''Checks if the configured group in devices is also configured in vdi config'''
+    # TODO: This does not make sure linuxmuster-import-devices has been run
+
     # get sure configured group in devices is also configured in vdi config
     for device in devices:
         if device[11] == master_vmid:
-            if device[2] == vdi_group:      
+            if device[2] == vdi_group.name:      
                 return True
             else:
                 return False
@@ -263,9 +264,7 @@ def create_master(vdi_group) -> bool:
     school_id = vdi_common.get_school_id(vdi_group.name)
     devices = vdi_common.devices_loader(school_id)
 
-
-    master_node = node
-    master_vmid = get_available_vmid(master_node, devices, vdi_group)
+    master_vmid = get_available_vmid(proxmox_node, devices, vdi_group)
     if not master_vmid:
         logger.error(f"[{vdi_group.name}] Error, no Master VM available")
         return False
@@ -285,7 +284,7 @@ def create_master(vdi_group) -> bool:
     # TODO Fix this to work with uefi
     # TODO improve whole config process
     parameters = {
-        "masterNode": master_node,
+        "masterNode": proxmox_node,
         "masterMac": vdi_group.data['mac'],
         "vm_configuration": {
             'name': vdi_group.data['name'],
@@ -320,16 +319,16 @@ def create_master(vdi_group) -> bool:
     send_linbo_remote_command(school_id,
                               master_device_info['ip'], vdi_group)  # and sets linbo-remote command
     # start to get prepared by LINBO
-    start_preparing_vm(master_node, master_vmid, vdi_group)
+    start_preparing_vm(proxmox_node, master_vmid, vdi_group)
 
     # if checkNmap succesful => change buildingstate finished and convert to template
-    if checkNmap(master_node, timeout, master_vmid, master_device_info['ip'],
-                 nmapPorts) == True:  # check if windows bootet succesfully
+    if checkNmap(proxmox_node, timeout, master_vmid, master_device_info['ip'],
+                 nmapPorts, vdi_group) == True:  # check if windows bootet succesfully
         master_description['buildstate'] = "finished"
         # description = json.dumps(master_description)
         # convert VM to Template if stopped
-        prepare_template(master_node, master_vmid, vdi_group)
-        proxmox.nodes(master_node).qemu(master_vmid).config.post(
+        prepare_template(proxmox_node, master_vmid, vdi_group)
+        proxmox.nodes(proxmox_node).qemu(master_vmid).config.post(
             description=json.dumps(master_description))
         logger.info(
             f"[{vdi_group}] Creating new Template for group terminated succesfully.")
@@ -337,7 +336,7 @@ def create_master(vdi_group) -> bool:
     else:
         master_description['buildstate'] = "failed"
         # description = json.dumps(master_description)
-        proxmox.nodes(master_node).qemu(master_vmid).config.post(
+        proxmox.nodes(proxmox_node).qemu(master_vmid).config.post(
             description=json.dumps(master_description))
         logger.info(f"[{vdi_group}] Creating new Template for group failed.")
         logger.info(f"[{vdi_group}] Failed Master is getting removed")

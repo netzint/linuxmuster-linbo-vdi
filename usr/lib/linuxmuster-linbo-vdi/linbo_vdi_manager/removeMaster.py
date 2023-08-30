@@ -14,7 +14,7 @@ from datetime import datetime
 import time
 import logging
 import getVmStates
-from globalValues import node,proxmox
+from globalValues import proxmox_node,proxmox
 #from globalValues getMasterDetails
 
 logger = logging.getLogger(__name__)
@@ -97,9 +97,9 @@ def remove_master(group_data,vdi_group):
                 # here it could be checked with createNewMaster functions if just nmap check is left
                 status = masterStates[vmid]['status']
                 if status == "running":
-                    proxmox.nodes(node).qemu(vmid).status.stop.post()
+                    proxmox.nodes(proxmox_node).qemu(vmid).status.stop.post()
                     logger.info(f"[{vdi_group}] Master " + str(vmid) + " is getting stopped.")
-                    if not waitForStatusStoppped(proxmox, 20, node, vmid):
+                    if not waitForStatusStoppped(proxmox, 20, proxmox_node, vmid):
                         logger.info(f"[{vdi_group}] Could not stop vm + " + vmid)
                         raise Exception(f"[{vdi_group}] Machine could not be stopped")
                     else: 
@@ -107,7 +107,7 @@ def remove_master(group_data,vdi_group):
                         # return 
                 try:
                     logger.info(f"[{vdi_group}] Try to delete VM which failed during building: {str(vmid)}")
-                    proxmox.nodes(node).qemu(vmid).delete()
+                    proxmox.nodes(proxmox_node).qemu(vmid).delete()
                     return
                 except Exception as err:
                     logger.info(f"[{vdi_group}] Master {str(vmid)} cant get removed.")
@@ -139,14 +139,14 @@ def remove_master(group_data,vdi_group):
                 status = masterStates[vmid]['status']
                 try: 
                     if status == "running":
-                        proxmox.nodes(node).qemu(vmid).status.stop.post()
+                        proxmox.nodes(proxmox_node).qemu(vmid).status.stop.post()
                         logger.info(f"[{vdi_group}] Master {str(vmid)} is getting stopped.")
-                        if not waitForStatusStoppped(proxmox, 20, node, vmid):
+                        if not waitForStatusStoppped(proxmox, 20, proxmox_node, vmid):
                             logger.info(f"[{vdi_group}] Could not stop vm + " + vmid)
                             raise Exception(f"[{vdi_group}] Machine could not be stopped")
                 
                     logger.info(f"[{vdi_group}] Try deleting failed at building VM: {str(vmid)}")
-                    proxmox.nodes(node).qemu(vmid).delete()
+                    proxmox.nodes(proxmox_node).qemu(vmid).delete()
                     return
                 except Exception as err:
                     logger.info(f"[{vdi_group}] Master {str(vmid)} could not be removed because {str(err)}.")
@@ -157,14 +157,14 @@ def remove_master(group_data,vdi_group):
                 status = masterStates[vmid]['status']
                 try:
                     if status == "running":
-                        proxmox.nodes(node).qemu(vmid).status.stop.post()
+                        proxmox.nodes(proxmox_node).qemu(vmid).status.stop.post()
                         logger.info(f"[{vdi_group}] Master {str(vmid)} is getting stopped.")
-                        if not waitForStatusStoppped(proxmox, 20, node, vmid):
+                        if not waitForStatusStoppped(proxmox, 20, proxmox_node, vmid):
                             logger.info("Could not stop vm + " + vmid)
                             raise Exception("Machine could not be stopped")
                     
                     logger.info(f"[{vdi_group}] Try deleting failed at building VM: {str(vmid)} ")
-                    proxmox.nodes(node).qemu(vmid).delete()
+                    proxmox.nodes(proxmox_node).qemu(vmid).delete()
                     return
                 except Exception as err:
                     logger.info(err)

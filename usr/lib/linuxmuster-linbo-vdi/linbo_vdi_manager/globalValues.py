@@ -18,8 +18,8 @@ file = open("/etc/linuxmuster/linbo-vdi/vdiConfig.json", 'r')
 vdiConfigStr = file.read()
 vdiConfig = json.loads(vdiConfigStr)
 
-global node
-node = vdiConfig['node']
+global proxmox_node
+proxmox_node = vdiConfig['node']
 #global pool
 #pool = vdiConfig['pool']
 global mutlischool

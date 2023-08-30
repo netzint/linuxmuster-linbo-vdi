@@ -15,7 +15,7 @@ import sys
 import logging
 import vdi_common
 from proxmoxer import ProxmoxAPI
-from globalValues import vdiLocalService, proxmox, node
+from globalValues import vdiLocalService, proxmox, proxmox_node
 if vdiLocalService == False:
     from globalValues import ssh
 
@@ -153,7 +153,7 @@ def waitForStatusRunning(timeout, clone_node, clone_vmid):
 def build_clone(clone_states, group_data, master_vmid, vdi_group):
 
     # get basic information:
-    master_node = node
+    #master_node = node
     master_name = group_data['name']  # master-name for vm on pve
     # masterPool = pool
 
@@ -163,7 +163,7 @@ def build_clone(clone_states, group_data, master_vmid, vdi_group):
     id_range = vdi_common.get_vmid_range(devices, vdi_group)
 
     # fuer proxmox:
-    clone_node = master_node
+    #clone_node = master_node
     clone_vmid = get_next_available_vmid(clone_states, id_range, vdi_group)
     if not clone_vmid:
         return False
@@ -173,7 +173,7 @@ def build_clone(clone_states, group_data, master_vmid, vdi_group):
         group_data, master_vmid, clone_name, vdi_group)
 
     # Cloning:
-    clone_master(master_node, master_vmid, clone_vmid,
+    clone_master(proxmox_node, master_vmid, clone_vmid,
                  clone_name, clone_description, vdi_group)
 
     # change correct MAC address:  ### change MAC  address as registered !!!! get net0 from master and only change mac  # net0 = bridge=vmbr0,virtio=62:0C:5A:A0:77:FF,tag=29
@@ -186,7 +186,7 @@ def build_clone(clone_states, group_data, master_vmid, vdi_group):
 
     logger.info(
         f"[{vdi_group} Assigning Mac {str(clone_network_info['mac'])} to {clone_vmid}")
-    proxmox.nodes(clone_node).qemu(clone_vmid).config.post(net0=cloneNet)
+    proxmox.nodes(proxmox_node).qemu(clone_vmid).config.post(net0=cloneNet)
 
     # Lock removing - not tested:
     # try:
@@ -199,13 +199,13 @@ def build_clone(clone_states, group_data, master_vmid, vdi_group):
 
     # startClone:
 
-    start_clone(clone_node, clone_vmid, vdi_group)
+    start_clone(proxmox_node, clone_vmid, vdi_group)
     timeoutBuilding = group_data['timeout_building_clone']
     # if checkNmap succesful => change buildingstate finished
     if checkNmap(timeoutBuilding, clone_vmid, clone_network_info['ip']) == True:
         clone_description['buildstate'] = "finished"
         description = json.dumps(clone_description)
-        proxmox.nodes(clone_node).qemu(
+        proxmox.nodes(proxmox_node).qemu(
             clone_vmid).config.post(description=description)
         logger.info(
             f"[{vdi_group} Creating new Clone for group {vdi_group} terminated succesfully")
@@ -213,7 +213,7 @@ def build_clone(clone_states, group_data, master_vmid, vdi_group):
     else:
         clone_description['buildstate'] = "failed"
         description = json.dumps(clone_description)
-        proxmox.nodes(clone_node).qemu(
+        proxmox.nodes(proxmox_node).qemu(
             clone_vmid).config.post(description=description)
         logger.info(
             f" [{vdi_group}Creating new Clone for group {vdi_group} failed. Deleting...")

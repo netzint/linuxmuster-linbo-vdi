@@ -9,7 +9,7 @@
 
 import json
 from datetime import datetime
-from globalValues import node,proxmox,timeoutConnectionRequest
+from globalValues import proxmox_node,proxmox,timeoutConnectionRequest
 #from globalValues import getMasterDetails
 import vdi_common
 import argparse
@@ -104,6 +104,7 @@ def get_vm_info_by_api(node, vm_id,vdi_group,vm_type='clone')-> dict:
 
     ##### split and separate description from descriptionf field from vm ######
     description_json = json.loads(vm_api_infos['description'])
+    
     try:
         if vm_type == 'clone':
             vm_api_infos['image'] = description_json["image"]
@@ -191,7 +192,7 @@ def get_clone_states(group_data,vdi_group)-> dict:
     idRange = vdi_common.get_vmid_range(devices, vdi_group)
 
     ####### collect API Parameter and Group Infos from each VM, merges them, and collects them in one dict #######
-    clone_states = get_vm_info_multithreaded(idRange,node,vdi_group,'clone')
+    clone_states = get_vm_info_multithreaded(idRange, proxmox_node, vdi_group, 'clone')
 
     # expand information by devices.csv
     # TODO: move this to the get_vm_info_multithreaded function
@@ -286,7 +287,7 @@ def get_vm_info_multithreaded(vdi_group,vm_type)-> dict:
     processes = []
     data = {}
     for vmid in vdi_group.data['vmids']:
-        processes.append(pool.apply_async(func=get_vm_info_by_api, args=(node,vmid,vdi_group.name,vm_type,)))
+        processes.append(pool.apply_async(func=get_vm_info_by_api, args=(proxmox_node,vmid,vdi_group.name,vm_type,)))
     for process in processes:
         returnValue = process.get()
         if returnValue:
@@ -295,6 +296,26 @@ def get_vm_info_multithreaded(vdi_group,vm_type)-> dict:
     pool.close()
     pool.join()
     return data
+
+
+def get_current_master(master_states, vdi_group) -> int:
+    """
+    Returns the most recent master
+
+    :param master_states: dict
+    :param vdi_group: VDIGroup
+    :rtype VDIGroup
+    """
+    timestampLatest = 0
+    logging.debug(f"[{vdi_group.name}] All master vmids: {vdi_group.data['vmids']}")
+    
+    for master in master_states['masters']:
+        if float(master.date_of_creation) >= float(timestampLatest):
+            timestampLatest = master.date_of_creation
+            latest = master
+
+    logging.info(f"[{vdi_group.name}] most recent master vmid is {latest.vmid}, timestamp: {str(latest.date_of_creation)}")
+    return latest
 
 #### MASTER
 def get_master_states(vdi_group) -> dict:
@@ -307,10 +328,10 @@ def get_master_states(vdi_group) -> dict:
     #devices=vdi_common.devices_loader(schoolId)
     
     ####### Get collected JSON Info File to all VMs from Group #############
-    master_vmids = vdi_group.data['vmids']
-    master_hostname = vdi_group.data['hostname']
+    #master_vmids = vdi_group.data['vmids']
+    #master_hostname = vdi_group.data['hostname']
     logger.info(f"[{vdi_group.name}] ID Range for imagegroup")
-    logger.info(f"[{vdi_group.name}] {master_vmids}" )
+    logger.info(f"[{vdi_group.name}] {vdi_group.data['vmids']}" )
 
 
     #allApiInfos = {}
@@ -318,34 +339,20 @@ def get_master_states(vdi_group) -> dict:
 
     #master_states.update(allApiInfos)
     
-    # summary
+    # create states summary
     master_states['summary'] = {
         'existing_master'     : 0,
-        'registered'   : len(master_vmids),
+        'registered'   : len(vdi_group.data['vmids']),
         'building_master'     : 0,
         'failed_master': 0,
         'finished'     : 0,
     }
 
-    #master = VDIMaster(vdi_group)
-    #master.get_master_group_infos()
-
-    ##master_states['basic'] = get_master_group_infos(devices, master_hostname)
-    #if not master_states['basic']:
-    #    return 
-    #master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group.name)
-    #master_states['basic']['hostname'] = master_hostname
-    #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
-    
-    
-    ####### get api Infos #######
-
-
-    
+    # calculate master summary
     for vmid in allApiInfos:
         # calculate existing
         try:
-            proxmox.nodes(node).qemu(vmid).status.get()
+            proxmox.nodes(proxmox_node).qemu(vmid).status.get()
             master_states["summary"]["existing_master"]  = master_states["summary"]["existing_master"]  + 1
             # calculate buildstates - just from existing vms!
             try:
@@ -359,8 +366,32 @@ def get_master_states(vdi_group) -> dict:
                 pass
         except Exception:
             pass
+
+    # create master objects
+    master_states['masters'] = []
+    for api_infos in allApiInfos.values():
+        master_states['masters'].append(VDIMaster(vdi_group, api_infos))
     
-    #master_states['current_master']=vdi_common.get_current_master(master_states, master_vmids, vdi_group.name)
+    if len(master_states['masters']) > 0:
+        master_states['current_master']=get_current_master(master_states, vdi_group)
+
+    #master = VDIMaster(vdi_group)
+    #master.get_master_group_infos()
+
+    #master_states['basic'] = get_master_group_infos(devices, master_hostname)
+    #if not master_states['basic']:
+    #    return 
+    #master_states['basic']['actual_imagesize'] = get_needed_imagesize(vdi_group.name)
+    #master_states['basic']['hostname'] = master_hostname
+    #logger.info("*** Getting information to Masters from Group " + vdiGroup + " ***")
+    
+    
+    ####### get api Infos #######
+
+    
+
+    
+    
     return master_states
 
 

@@ -1,3 +1,9 @@
+linuxmuster-linbo-vdi (0.90.27-1) lmn72-testing; urgency=low
+
+  * Update docs and add api service
+
+ -- Lukas Spitznagel <lukas.spitznagel@netzint.de>  Wed, 22 May 2024 17:29:00 +0200
+
 linuxmuster-linbo-vdi (0.90.26-1) lmn72-testing; urgency=low
 
   * Test new commit with bugfixes

@@ -2,3 +2,5 @@ proxmoxer
 paramiko
 requests
 python-nmap
+uvicorn
+fastapi

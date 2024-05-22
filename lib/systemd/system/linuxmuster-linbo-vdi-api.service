@@ -1,0 +1,16 @@
+[Unit]
+Description=linuxmuster.net LINBO VDI API
+After=syslog.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/lib/linuxmuster-linbo-vdi/
+ExecStart=/usr/bin/python3 /usr/lib/linuxmuster-linbo-vdi/vdi-api.py
+SyslogIdentifier=linbovdiapi
+StandardOutput=syslog
+StandardError=syslog
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

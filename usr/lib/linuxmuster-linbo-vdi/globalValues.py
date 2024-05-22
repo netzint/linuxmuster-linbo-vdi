@@ -37,6 +37,8 @@ global proxy_url
 proxy_url = vdiConfig['proxy_url']
 global ssh
 ssh = paramiko.SSHClient()
+global lmnapisecret
+lmnapisecret = vdiConfig['lmn-api-secret']
 
 
 # set local or remote option

@@ -1,13 +1,14 @@
 {
-"node" : "pve01",
-"hvIp" : "192.168.99.10",
-"hvUser" : "root@pam",
-"password" : "Muster!",
-"nmapPorts" : "135,455,49665",
-"vdiLocalService" : true,
-"serverIP" : "10.0.0.1",
-"debugging" : true,
-"multischool": true,
-"timeoutConnectionRequest" : 1000,
-"proxy_url": "server.demo.multi.schule"
+    "node" : "pve01",
+    "hvIp" : "192.168.99.10",
+    "hvUser" : "root@pam",
+    "password" : "Muster!",
+    "nmapPorts" : "135,455,49665",
+    "vdiLocalService" : true,
+    "serverIP" : "10.0.0.1",
+    "debugging" : true,
+    "multischool": true,
+    "timeoutConnectionRequest" : 1000,
+    "proxy_url": "server.demo.multi.schule",
+    "lmn-api-secret": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 }

@@ -217,3 +217,8 @@ python3 /usr/lib/linuxmuster-linbo-vdi/getConnection.py win10-vdi netzint-teache
 ```
 curl -X POST --header "LMN-API-Secret: ABCDEFGHIJKLMNOPQRSTUVWXYZ" --header "Content-Type: application/json" --data '{"group":"win10-vdi","user":"netzint-teacher"}' http://localhost:5555/api/connection/request
 ```
+
+#### Sample result
+```
+{"status":true,"data":{"ip":"10.0.0.201","configFile":"/tmp/vdi/start-vdi-20240522173736-EI32IT.vv"}}
+```

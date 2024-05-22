@@ -36,6 +36,7 @@ case "$1" in
             #echo "Configure systemctl.."
             systemctl daemon-reload
             systemctl enable linuxmuster-linbo-vdi
+            systemctl enable linuxmuster-linbo-vdi-api
             #systemctl start linuxmuster-linbo-vdi
 
             # set already installed flag

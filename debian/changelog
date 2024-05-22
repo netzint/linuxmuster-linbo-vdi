@@ -1,3 +1,9 @@
+linuxmuster-linbo-vdi (0.90.26-1) lmn72-testing; urgency=low
+
+  * Test new commit with bugfixes
+
+ -- Lukas Spitznagel <lukas.spitznagel@netzint.de>  Wed, 22 May 2024 12:20:00 +0200
+
 linuxmuster-linbo-vdi (0.90.25-1) lmn71; urgency=low
 
   *  Fixed postinst script

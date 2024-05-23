@@ -154,16 +154,21 @@ vdi;vdi-client20;win10-vdi;AA:EE:4E:B5:5C:20;10.0.0.220;;;;classroom-studentcomp
 
 ### 7. Create prestart file for image
 /srv/linbo/images/win10-22h2-pro-education/win10-22h2-pro-education.prestart
-```patchfile = "/cache/demo_win10-21hh1_generic.cloop.reg"
-patch = "/tmp/patch.reg"
+```
+# linuxmuster-linbo-vdi patch
 
-echo "Patching windows registry with patchfile" | tee /tmp/patch.log
-sed 's|{\$HostName\$}|'"$HOSTNAME"'|g' "$patchfile" > "$patch"
-dos2unix "$patch"
-cat "$patch" >>/tmp/patch.log
-patch_registry "$patch" /mnt 2>&1 >>/tmp/patch.log
-[ -e /tmp/output ] && cat /tmp/output >>/tmp/patch.log
-rm -f "$patch"
+if [[ $HOSTNAME == *"vdi"* ]]; then
+  patch="/tmp/patch.reg"
+
+  linbo_mount /dev/sda1 /mnt
+  linbo_mount /dev/sda2 /cache
+
+  sed 's|{\$HostName\$}|'"$HOSTNAME"'|g' /cache/*.reg > "$patch"
+
+  linbo_patch_registry "$patch"
+
+  rm -f "$patch"
+fi
 ```
 
 ## CLI-Tools / API
